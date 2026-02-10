@@ -2,30 +2,145 @@
 import { Chapter, AppSettings } from "../types";
 
 /**
- * Simulates the Email sending process.
- * IMPORTANT: Direct SMTP from a browser is technically impossible due to security.
- * A production app would use a backend (Node.js, Firebase, etc.) or a service like EmailJS.
- * This function provides high-fidelity feedback and simulates the protocol handshake.
+ * Generates EPUB content as text/markdown
  */
-export async function generateEpubAndEmail(chapters: Chapter[], settings: AppSettings): Promise<void> {
-  console.log(`[PodRead SMTP Bridge] Initializing secure connection to ${settings.smtpHost || 'simulated-relay.podread.io'}...`);
-  
-  // Handshake simulation
-  await new Promise(resolve => setTimeout(resolve, 800));
-  console.log(`[PodRead SMTP Bridge] Authenticating user: ${settings.smtpUser}...`);
-  
-  await new Promise(resolve => setTimeout(resolve, 1200));
-  console.log(`[PodRead SMTP Bridge] Constructing EPUB payload for ${chapters.length} chapters...`);
-  
-  // Simulate processing time
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  if (settings.useCustomSmtp && (!settings.smtpHost || !settings.smtpUser || !settings.smtpPass)) {
-    throw new Error("SMTP settings are incomplete. Please verify Host, User, and Pass.");
+function generateEpubContent(chapters: Chapter[]): string {
+  const title = `PodRead Collection - ${new Date().toLocaleDateString()}`;
+  const header = `# ${title}\n\nGenerated on ${new Date().toLocaleString()}\n\n---\n\n`;
+  const content = chapters.map((chapter, index) => 
+    `## Chapter ${index + 1}: ${chapter.title}\n\n${chapter.content}\n\n---\n\n`
+  ).join('');
+  return header + content;
+}
+
+/**
+ * Sends email via backend API
+ */
+async function sendEmailViaAPI(
+  emailContent: string,
+  recipient: string,
+  settings: AppSettings
+): Promise<void> {
+  const apiUrl = import.meta.env.VITE_EMAIL_API_URL;
+  if (!apiUrl) {
+    throw new Error("Email API URL not configured. Please set VITE_EMAIL_API_URL environment variable.");
   }
 
-  console.log(`[PodRead SMTP Bridge] Success: Message sent to ${settings.smtpUser}.`);
-  return Promise.resolve();
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      to: recipient,
+      subject: `PodRead Collection - ${new Date().toLocaleDateString()}`,
+      content: emailContent,
+      smtpConfig: settings.useCustomSmtp ? {
+        host: settings.smtpHost,
+        port: parseInt(settings.smtpPort) || 465,
+        user: settings.smtpUser,
+        pass: settings.smtpPass,
+      } : undefined,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Email API error: ${response.status} - ${errorText}`);
+  }
+}
+
+/**
+ * Sends email via EmailJS
+ */
+async function sendEmailViaEmailJS(
+  emailContent: string,
+  recipient: string
+): Promise<void> {
+  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+  if (!serviceId || !templateId || !publicKey) {
+    throw new Error("EmailJS not configured. Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY environment variables.");
+  }
+
+  // Dynamically load EmailJS library from CDN
+  if (!(window as any).emailjs) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+      script.onload = () => {
+        // Wait a bit for emailjs to be available
+        setTimeout(resolve, 100);
+      };
+      script.onerror = () => reject(new Error("Failed to load EmailJS library from CDN"));
+      document.head.appendChild(script);
+    });
+  }
+
+  const emailjs = (window as any).emailjs;
+  if (!emailjs) {
+    throw new Error("Failed to load EmailJS library.");
+  }
+
+  // Initialize EmailJS with public key
+  emailjs.init(publicKey);
+
+  // Send email
+  const result = await emailjs.send(serviceId, templateId, {
+    to_email: recipient,
+    subject: `PodRead Collection - ${new Date().toLocaleDateString()}`,
+    message: emailContent,
+  });
+
+  if (result.status !== 200) {
+    throw new Error(`EmailJS returned status ${result.status}`);
+  }
+}
+
+/**
+ * Sends email using configured method
+ */
+export async function generateEpubAndEmail(chapters: Chapter[], settings: AppSettings): Promise<void> {
+  if (!settings.smtpUser) {
+    throw new Error("Email address not configured. Please set your email address in Settings.");
+  }
+
+  console.log(`[PodRead] Preparing email for ${chapters.length} chapters...`);
+  
+  // Generate EPUB content
+  const emailContent = generateEpubContent(chapters);
+  const recipient = settings.smtpUser;
+
+  // Try to send via configured method
+  const emailApiUrl = import.meta.env.VITE_EMAIL_API_URL;
+  const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+
+  try {
+    if (emailApiUrl) {
+      // Use backend API
+      console.log(`[PodRead] Sending email via backend API...`);
+      await sendEmailViaAPI(emailContent, recipient, settings);
+      console.log(`[PodRead] Email sent successfully via API to ${recipient}`);
+    } else if (emailjsServiceId) {
+      // Use EmailJS
+      console.log(`[PodRead] Sending email via EmailJS...`);
+      await sendEmailViaEmailJS(emailContent, recipient);
+      console.log(`[PodRead] Email sent successfully via EmailJS to ${recipient}`);
+    } else {
+      // No email service configured
+      throw new Error(
+        "No email service configured. Please configure one of the following:\n" +
+        "1. Set VITE_EMAIL_API_URL for backend API\n" +
+        "2. Set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY for EmailJS\n\n" +
+        "Alternatively, you can download the file directly using the Download button."
+      );
+    }
+  } catch (error: any) {
+    console.error('[PodRead] Email sending failed:', error);
+    throw error;
+  }
 }
 
 /**

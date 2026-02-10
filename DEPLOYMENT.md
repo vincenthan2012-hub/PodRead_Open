@@ -60,7 +60,9 @@ git push origin main
 
 ### 方式一：使用 render.yaml 配置文件（推荐）
 
-项目已经包含了 `render.yaml` 配置文件，可以自动配置服务。
+项目已经包含了 `render.yaml` 配置文件，可以自动配置**两个服务**：
+- **前端服务** (`podread`) - 用户界面
+- **后端服务** (`podread-email-api`) - 邮件发送 API
 
 1. **登录 Render Dashboard**
    - 访问 [render.com](https://render.com) 并登录
@@ -75,10 +77,14 @@ git push origin main
    - 在 Blueprint 配置页面，您需要为每个环境变量设置值
    - 点击每个环境变量旁边的 "Set value" 按钮
    - 填入对应的值（见下方环境变量说明）
+   - **注意**：需要分别配置前端和后端服务的环境变量
 
 4. **应用配置**
    - 点击 "Apply" 创建服务
-   - Render 会自动创建 Web Service 并开始部署
+   - Render 会自动创建两个 Web Service 并开始部署
+   - 等待部署完成后，需要配置 `VITE_EMAIL_API_URL` 指向后端服务 URL
+
+**详细的环境变量配置说明，请查看 `RENDER_ENV_SETUP.md` 文件。**
 
 ### 方式二：手动创建 Web Service
 
@@ -124,16 +130,49 @@ git push origin main
 | `VITE_AI_API_KEY` | API 密钥 | 如果使用非 Gemini 提供商，填写 API 密钥 |
 | `GEMINI_API_KEY` | Gemini API 密钥 | 如果使用 Gemini 提供商，填写 Gemini API 密钥 |
 
-#### 可选的环境变量（SMTP 邮件配置）
+#### 可选的环境变量（邮件 API 配置）
 
 | Key | Value | 说明 |
 |-----|-------|------|
-| `VITE_SMTP_HOST` | SMTP 服务器地址 | 如 `smtp.gmail.com` |
-| `VITE_SMTP_PORT` | SMTP 端口 | 如 `465` (SSL) 或 `587` (TLS) |
-| `VITE_SMTP_USER` | 邮箱地址 | 用于发送邮件的邮箱地址 |
-| `VITE_SMTP_PASS` | 应用密码 | 邮箱的应用专用密码（不是登录密码） |
+| `VITE_EMAIL_API_URL` | 后端 API URL | 格式：`https://podread-email-api.onrender.com/api/send-email` |
 
-**注意**: 所有可选的环境变量都可以在应用内的设置面板中配置。环境变量主要用于设置默认值，方便团队统一配置。
+**重要**：如果使用后端 API 发送邮件（推荐），需要：
+1. 先部署后端服务 (`podread-email-api`)
+2. 获取后端服务的 URL
+3. 在前端服务中设置 `VITE_EMAIL_API_URL` 为后端 API 地址
+
+#### 可选的环境变量（SMTP 默认值，仅用于设置面板显示）
+
+| Key | Value | 说明 |
+|-----|-------|------|
+| `VITE_SMTP_HOST` | SMTP 服务器地址 | 如 `smtp.gmail.com`（仅用于设置面板默认值） |
+| `VITE_SMTP_PORT` | SMTP 端口 | 如 `465`（仅用于设置面板默认值） |
+| `VITE_SMTP_USER` | 邮箱地址 | 仅用于设置面板默认值 |
+
+**注意**: 
+- 不要设置 `VITE_SMTP_PASS`（会被打包到前端代码，存在安全风险）
+- 实际邮件发送使用后端 API，后端有自己的 SMTP 配置
+- 详细配置说明请查看 `RENDER_ENV_SETUP.md`
+
+### 3.3 配置后端服务环境变量（如果使用邮件 API）
+
+如果使用后端 API 发送邮件，需要在 **`podread-email-api`** 服务中配置：
+
+| Key | Value | 说明 |
+|-----|-------|------|
+| `SMTP_HOST` | `smtp.gmail.com` | SMTP 服务器地址 |
+| `SMTP_PORT` | `465` | SMTP 端口 |
+| `SMTP_USER` | 你的邮箱地址 | 用于发送邮件的邮箱 |
+| `SMTP_PASS` | 应用专用密码 | Gmail 需要生成应用专用密码 |
+
+**Gmail 应用专用密码获取方法**：
+1. 访问：https://myaccount.google.com/apppasswords
+2. 选择应用：**"邮件"**
+3. 选择设备：**"其他（自定义名称）"**，输入 "PodRead"
+4. 复制生成的 16 位密码
+5. 在 Render 中设置为 `SMTP_PASS` 的值
+
+**详细配置说明请查看 `RENDER_ENV_SETUP.md` 文件。**
 
 ### 3.4 部署
 
