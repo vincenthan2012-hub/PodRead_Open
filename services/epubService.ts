@@ -21,12 +21,20 @@ async function sendEmailViaAPI(
   recipient: string,
   settings: AppSettings
 ): Promise<void> {
-  const apiUrl = import.meta.env.VITE_EMAIL_API_URL;
-  if (!apiUrl) {
-    throw new Error("Email API URL not configured. Please set VITE_EMAIL_API_URL environment variable.");
+  // Use relative path if VITE_EMAIL_API_URL is not set or is a relative path
+  // This allows the same code to work with both single-service and dual-service setups
+  let apiUrl = import.meta.env.VITE_EMAIL_API_URL;
+  
+  // If not configured or is a placeholder, use relative path (works with single-service setup)
+  if (!apiUrl || apiUrl.includes('your-backend-api.com') || apiUrl.includes('localhost')) {
+    apiUrl = '/api/send-email';
   }
+  
+  // If it's already a relative path, use it as-is
+  // If it's an absolute URL, use it (for dual-service setup)
+  const finalUrl = apiUrl.startsWith('/') ? apiUrl : apiUrl;
 
-  const response = await fetch(apiUrl, {
+  const response = await fetch(finalUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -35,6 +43,7 @@ async function sendEmailViaAPI(
       to: recipient,
       subject: `PodRead Collection - ${new Date().toLocaleDateString()}`,
       content: emailContent,
+      chapters: chapters, // Send full chapter data for EPUB generation
       smtpConfig: settings.useCustomSmtp ? {
         host: settings.smtpHost,
         port: parseInt(settings.smtpPort) || 465,
@@ -118,13 +127,15 @@ export async function generateEpubAndEmail(chapters: Chapter[], settings: AppSet
   const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 
   try {
-    if (emailApiUrl) {
-      // Use backend API
+    // Priority: Backend API > EmailJS
+    // If VITE_EMAIL_API_URL is not set, try using relative path (for single-service setup)
+    if (emailApiUrl || emailjsServiceId === undefined) {
+      // Use backend API (either configured URL or relative path)
       console.log(`[PodRead] Sending email via backend API...`);
       await sendEmailViaAPI(emailContent, recipient, settings);
       console.log(`[PodRead] Email sent successfully via API to ${recipient}`);
     } else if (emailjsServiceId) {
-      // Use EmailJS
+      // Use EmailJS (only if API is not available and EmailJS is configured)
       console.log(`[PodRead] Sending email via EmailJS...`);
       await sendEmailViaEmailJS(emailContent, recipient);
       console.log(`[PodRead] Email sent successfully via EmailJS to ${recipient}`);
@@ -132,7 +143,7 @@ export async function generateEpubAndEmail(chapters: Chapter[], settings: AppSet
       // No email service configured
       throw new Error(
         "No email service configured. Please configure one of the following:\n" +
-        "1. Set VITE_EMAIL_API_URL for backend API\n" +
+        "1. Set VITE_EMAIL_API_URL for backend API (or use relative path /api/send-email for single-service setup)\n" +
         "2. Set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY for EmailJS\n\n" +
         "Alternatively, you can download the file directly using the Download button."
       );

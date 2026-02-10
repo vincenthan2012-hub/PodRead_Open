@@ -33,15 +33,20 @@ const ChapterList: React.FC<ChapterListProps> = ({
             }`}
             onClick={() => onSelect(chapter.id)}
           >
-            <input 
-              type="checkbox"
-              checked={chapter.selected}
-              onChange={(e) => {
-                e.stopPropagation();
-                onToggleSelection(chapter.id);
-              }}
-              className="w-4 h-4 rounded border-stone-300 text-stone-800 focus:ring-stone-500 cursor-pointer"
-            />
+            <div onClick={(e) => e.stopPropagation()}>
+              <input 
+                type="checkbox"
+                checked={chapter.selected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onToggleSelection(chapter.id);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="w-4 h-4 rounded border-stone-300 text-stone-800 focus:ring-stone-500 cursor-pointer"
+              />
+            </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-medium text-stone-800 truncate">{chapter.title}</h4>
               <p className="text-xs text-stone-400 mt-0.5">

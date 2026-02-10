@@ -29,6 +29,7 @@ const App: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(() => getDefaultSettings());
+  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,6 +41,9 @@ const App: React.FC = () => {
       setLoading(false);
       if (!session?.user) {
         setShowAuth(true);
+      } else {
+        // 如果用户已登录，加载用户数据
+        loadUserData(session.user.id);
       }
     });
 
@@ -50,8 +54,10 @@ const App: React.FC = () => {
         setShowAuth(true);
         setChapters([]);
         setSettings(getDefaultSettings());
+        setIsSettingsLoaded(false);
       } else {
         setShowAuth(false);
+        setIsSettingsLoaded(false);
         loadUserData(session.user.id);
       }
     });
@@ -74,20 +80,25 @@ const App: React.FC = () => {
         // 如果没有保存的设置，使用环境变量默认值
         setSettings(getDefaultSettings());
       }
+      // 标记设置已加载，允许后续保存
+      setIsSettingsLoaded(true);
     } catch (error) {
       console.error('Error loading user data:', error);
       setStatus(prev => ({ ...prev, error: 'Failed to load your data' }));
+      // 即使出错也标记为已加载，避免无限等待
+      setIsSettingsLoaded(true);
     }
   };
 
   // Save settings to Supabase
+  // 只有在设置已加载后才保存，避免在页面刷新时用默认值覆盖数据库中的设置
   useEffect(() => {
-    if (user && settings) {
+    if (user && settings && isSettingsLoaded) {
       saveSettings(user.id, settings).catch(error => {
         console.error('Error saving settings:', error);
       });
     }
-  }, [settings, user]);
+  }, [settings, user, isSettingsLoaded]);
 
   // Save chapter to Supabase when chapters change
   const saveChapterToDB = async (chapter: Chapter) => {

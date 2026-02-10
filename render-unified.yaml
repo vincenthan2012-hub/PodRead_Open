@@ -1,10 +1,10 @@
 services:
-  # Frontend service
+  # Unified service (Frontend + Backend)
   - type: web
     name: podread
     env: node
-    buildCommand: npm install && npm run build
-    startCommand: npm run preview
+    buildCommand: npm install && npm run build && cd server && npm install
+    startCommand: node server/index-unified.js
     envVars:
       # 必需的环境变量
       - key: VITE_SUPABASE_URL
@@ -27,7 +27,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
         required: false
-      # 可选的 SMTP 配置
+      # 可选的 SMTP 配置（用于设置面板默认值）
       - key: VITE_SMTP_HOST
         sync: false
         required: false
@@ -37,22 +37,7 @@ services:
       - key: VITE_SMTP_USER
         sync: false
         required: false
-      - key: VITE_SMTP_PASS
-        sync: false
-        required: false
-      # 邮件 API 配置（后端服务 URL）
-      - key: VITE_EMAIL_API_URL
-        sync: false
-        required: false
-
-  # Backend Email API service
-  - type: web
-    name: podread-email-api
-    env: node
-    buildCommand: cd server && npm install
-    startCommand: cd server && npm start
-    envVars:
-      # Server configuration (PORT is automatically provided by Render)
+      # 后端 SMTP 配置（实际用于发送邮件）
       - key: SMTP_HOST
         sync: false
         required: false
@@ -65,4 +50,5 @@ services:
       - key: SMTP_PASS
         sync: false
         required: false
+      # 注意：VITE_EMAIL_API_URL 不再需要，因为前后端在同一个服务
 
