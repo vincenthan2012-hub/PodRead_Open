@@ -1,0 +1,6 @@
+
+{
+  "name": "PodRead - Podcast to Literature",
+  "description": "Transform raw podcast transcripts into beautifully written, print-ready book chapters using advanced AI. Export as EPUB or push to your e-reader.",
+  "requestFramePermissions": []
+}

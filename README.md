@@ -1,0 +1,156 @@
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
+
+# PodRead - Podcast to Literature Transformer
+
+将播客转录文本转换为精美文学作品的 AI 工具。
+
+## 功能特性
+
+- 📝 **智能转换**: 使用 AI 将播客转录文本转换为结构化的书籍章节
+- 📚 **个人图书馆**: 保存和管理所有转换的章节
+- 🔐 **用户认证**: 基于 Supabase 的安全用户认证系统
+- ☁️ **云端存储**: 所有数据安全存储在 Supabase 数据库中
+- 📧 **邮件发送**: 将章节导出为 EPUB 并通过邮件发送
+- ⚙️ **灵活配置**: 支持多种 AI 提供商（Gemini, DeepSeek, OpenRouter 等）
+
+## 技术栈
+
+- **前端**: React 19 + TypeScript + Vite
+- **认证和数据库**: Supabase
+- **AI 服务**: Google Gemini / 其他 OpenAI 兼容 API
+- **部署**: Render
+
+## 快速开始
+
+### 本地开发
+
+**前置要求**: Node.js 18+
+
+1. **安装依赖**:
+   ```bash
+   npm install
+   ```
+
+2. **配置环境变量**:
+   
+   创建 `.env` 文件：
+   ```env
+   # Supabase Configuration (必需)
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   
+   # AI Provider Configuration (可选)
+   VITE_AI_PROVIDER=gemini
+   VITE_AI_API_URL=
+   VITE_AI_MODEL_NAME=gemini-3-pro-preview
+   VITE_AI_API_KEY=
+   GEMINI_API_KEY=your_gemini_api_key
+   
+   # SMTP Email Configuration (可选)
+   VITE_SMTP_HOST=smtp.gmail.com
+   VITE_SMTP_PORT=465
+   VITE_SMTP_USER=your_email@gmail.com
+   VITE_SMTP_PASS=your_app_password
+   ```
+
+3. **设置 Supabase 数据库**:
+   
+   请参考 [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) 了解如何创建数据库表。
+
+4. **启动开发服务器**:
+   ```bash
+   npm run dev
+   ```
+
+5. 访问 `http://localhost:3000`
+
+### 部署到生产环境
+
+请参考 [DEPLOYMENT.md](./DEPLOYMENT.md) 了解详细的部署步骤。
+
+## 项目结构
+
+```
+├── components/          # React 组件
+│   ├── AuthModal.tsx   # 登录/注册界面
+│   ├── Header.tsx      # 顶部导航栏
+│   ├── ChapterList.tsx # 章节列表
+│   ├── BookPreview.tsx # 章节预览
+│   └── SettingsModal.tsx # 设置面板
+├── services/           # 业务逻辑服务
+│   ├── aiService.ts    # AI 转换服务
+│   ├── epubService.ts  # EPUB 生成服务
+│   └── databaseService.ts # Supabase 数据库服务
+├── lib/                # 工具库
+│   └── supabase.ts     # Supabase 客户端配置
+├── types.ts            # TypeScript 类型定义
+├── constants.ts        # 常量配置
+└── App.tsx             # 主应用组件
+```
+
+## 环境变量说明
+
+### 必需的环境变量
+
+| 变量名 | 说明 |
+|--------|------|
+| `VITE_SUPABASE_URL` | Supabase 项目 URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase 匿名密钥 |
+
+### 可选的环境变量（AI 配置）
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `VITE_AI_PROVIDER` | AI 提供商 (gemini/deepseek/siliconflow/openrouter/ollama/custom) | `gemini` |
+| `VITE_AI_API_URL` | AI API 端点 URL | 根据提供商自动设置 |
+| `VITE_AI_MODEL_NAME` | 默认模型名称 | `gemini-3-pro-preview` |
+| `VITE_AI_API_KEY` | AI API 密钥（非 Gemini 提供商） | - |
+| `GEMINI_API_KEY` | Gemini API 密钥 | - |
+
+### 可选的环境变量（SMTP 邮件配置）
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `VITE_SMTP_HOST` | SMTP 服务器地址 | - |
+| `VITE_SMTP_PORT` | SMTP 端口 | `465` |
+| `VITE_SMTP_USER` | 邮箱地址 | - |
+| `VITE_SMTP_PASS` | 应用密码 | - |
+
+**注意**: 所有可选的环境变量都可以在应用内的设置面板中配置。环境变量主要用于设置默认值，方便团队统一配置。
+
+## 数据库结构
+
+应用使用两个主要数据表：
+
+1. **chapters**: 存储用户创建的章节
+2. **user_settings**: 存储用户的个人设置
+
+详细表结构请参考 [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)。
+
+## 开发指南
+
+### 添加新的 AI 提供商
+
+1. 在 `types.ts` 中的 `AIProvider` 类型添加新提供商
+2. 在 `constants.ts` 的 `PROVIDER_DEFAULTS` 中添加默认配置
+3. 在 `services/aiService.ts` 中添加处理逻辑
+
+### 自定义样式
+
+应用使用 Tailwind CSS。所有样式类都在组件中内联定义。
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 支持
+
+如有问题，请查看：
+- [部署指南](./DEPLOYMENT.md)
+- [Supabase 设置指南](./SUPABASE_SETUP.md)

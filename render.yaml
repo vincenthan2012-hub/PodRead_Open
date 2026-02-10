@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: podread
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview
+    envVars:
+      # 必需的环境变量
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      # 可选的 AI 配置
+      - key: VITE_AI_PROVIDER
+        sync: false
+        required: false
+      - key: VITE_AI_API_URL
+        sync: false
+        required: false
+      - key: VITE_AI_MODEL_NAME
+        sync: false
+        required: false
+      - key: VITE_AI_API_KEY
+        sync: false
+        required: false
+      - key: GEMINI_API_KEY
+        sync: false
+        required: false
+      # 可选的 SMTP 配置
+      - key: VITE_SMTP_HOST
+        sync: false
+        required: false
+      - key: VITE_SMTP_PORT
+        sync: false
+        required: false
+      - key: VITE_SMTP_USER
+        sync: false
+        required: false
+      - key: VITE_SMTP_PASS
+        sync: false
+        required: false
+
