@@ -99,17 +99,87 @@ else
 fi
 echo ""
 
+# 检查并安装后端依赖
+echo -e "${YELLOW}[5/6] 检查后端依赖...${NC}"
+SERVER_DIR="$PROJECT_DIR/server"
+if [ ! -d "$SERVER_DIR/node_modules" ]; then
+    echo -e "${YELLOW}未找到后端 node_modules，正在安装依赖...${NC}"
+    cd "$SERVER_DIR"
+    npm install
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ 后端依赖安装失败${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}✓ 后端依赖安装完成${NC}"
+else
+    echo -e "${GREEN}✓ 后端依赖已存在${NC}"
+fi
+echo ""
+
 # 启动开发服务器
-echo -e "${YELLOW}[5/5] 启动开发服务器...${NC}"
+echo -e "${YELLOW}[6/6] 启动开发服务器...${NC}"
 echo -e "${BLUE}项目目录: $PROJECT_DIR${NC}"
-echo -e "${BLUE}访问地址: http://localhost:3000${NC}"
+echo -e "${BLUE}前端地址: http://localhost:3000${NC}"
+echo -e "${BLUE}后端 API: http://localhost:3001/api/send-email${NC}"
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  开发服务器启动中...${NC}"
-echo -e "${GREEN}  按 Ctrl+C 停止服务器${NC}"
+echo -e "${GREEN}  按 Ctrl+C 停止所有服务器${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
+# 清理函数：当脚本退出时停止所有后台进程
+cleanup() {
+    echo ""
+    echo -e "${YELLOW}正在停止服务器...${NC}"
+    if [ ! -z "$BACKEND_PID" ]; then
+        kill $BACKEND_PID 2>/dev/null
+        echo -e "${GREEN}✓ 后端服务器已停止${NC}"
+    fi
+    # 前端服务器在前台运行，会随脚本自动退出
+    exit 0
+}
+
+# 设置信号捕获
+trap cleanup SIGINT SIGTERM
+
+# 启动后端服务器（后台运行）
+echo -e "${BLUE}启动后端服务器 (端口 3001)...${NC}"
+cd "$SERVER_DIR"
+PORT=3001 node index.js > /tmp/podread-backend.log 2>&1 &
+BACKEND_PID=$!
+
+# 等待后端服务器启动
+sleep 2
+
+# 检查后端是否启动成功
+if ! kill -0 $BACKEND_PID 2>/dev/null; then
+    echo -e "${RED}❌ 后端服务器启动失败，请查看日志: /tmp/podread-backend.log${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ 后端服务器已启动 (PID: $BACKEND_PID)${NC}"
+echo ""
+
+# 启动前端开发服务器（前台运行，可以看到输出）
+echo -e "${BLUE}启动前端开发服务器 (端口 3000)...${NC}"
+echo ""
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}  ✅ 所有服务器已启动${NC}"
+echo -e "${GREEN}========================================${NC}"
+echo ""
+echo -e "${BLUE}前端: http://localhost:3000${NC}"
+echo -e "${BLUE}后端 API: http://localhost:3001/api/send-email${NC}"
+echo -e "${BLUE}健康检查: http://localhost:3001/health${NC}"
+echo ""
+echo -e "${YELLOW}提示: 查看后端日志请运行: tail -f /tmp/podread-backend.log${NC}"
+echo -e "${YELLOW}按 Ctrl+C 停止所有服务器${NC}"
+echo ""
+
 cd "$PROJECT_DIR"
+# 前台运行前端服务器（这样可以看到 Vite 的输出）
 npm run dev
+
+# 如果前端服务器退出，执行清理
+cleanup
 

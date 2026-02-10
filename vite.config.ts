@@ -8,6 +8,16 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          // Proxy API requests to backend server during development
+          // This allows using Vite dev server with hot reload while backend runs separately
+          // To use this, run backend server on port 3001: cd server && npm run dev
+          '/api': {
+            target: 'http://localhost:3001',
+            changeOrigin: true,
+            secure: false,
+          }
+        }
       },
       preview: {
         port: Number(process.env.PORT) || 3000,

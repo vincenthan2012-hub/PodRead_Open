@@ -12,12 +12,19 @@ export type AIProvider = 'gemini' | 'deepseek' | 'siliconflow' | 'openrouter' | 
 
 export type ViewMode = 'draft' | 'library' | 'reader';
 
+export interface ProviderConfig {
+  apiKey: string;
+  apiUrl: string;
+  modelName: string;
+}
+
 export interface AppSettings {
   // AI Settings
   aiProvider: AIProvider;
-  apiKey: string;
-  modelName: string;
-  apiUrl: string;
+  apiKey: string; // Current provider's API key (for backward compatibility)
+  modelName: string; // Current provider's model name
+  apiUrl: string; // Current provider's API URL (for backward compatibility)
+  providerConfigs: Partial<Record<AIProvider, ProviderConfig>>; // Store configs for each provider
   savedModels: string[]; // List of custom saved model names
   
   // Email Delivery Settings

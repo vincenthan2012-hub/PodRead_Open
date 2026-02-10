@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Chapter, AppSettings } from '../types';
+import { Chapter, AppSettings, AIProvider } from '../types';
 
 // Chapters table operations
 export async function getChapters(userId: string): Promise<Chapter[]> {
@@ -99,11 +99,33 @@ export async function getSettings(userId: string): Promise<AppSettings | null> {
 
   if (!data) return null;
 
+  const aiProvider = (data.ai_provider || 'gemini') as AIProvider;
+  let providerConfigs = data.provider_configs || {};
+
+  // Migrate legacy data: if providerConfigs is empty or doesn't have current provider, initialize from legacy fields
+  if (!providerConfigs || Object.keys(providerConfigs).length === 0 || !providerConfigs[aiProvider]) {
+    providerConfigs = {
+      ...providerConfigs,
+      [aiProvider]: {
+        apiKey: data.api_key || '',
+        apiUrl: data.api_url || '',
+        modelName: data.model_name || ''
+      }
+    };
+  }
+
+  // Get current provider's config
+  const currentProviderConfig = providerConfigs[aiProvider];
+  const apiKey = currentProviderConfig?.apiKey || '';
+  const apiUrl = currentProviderConfig?.apiUrl || '';
+  const modelName = currentProviderConfig?.modelName || '';
+
   return {
-    aiProvider: data.ai_provider || 'gemini',
-    apiKey: data.api_key || '',
-    modelName: data.model_name || '',
-    apiUrl: data.api_url || '',
+    aiProvider,
+    apiKey,
+    modelName,
+    apiUrl,
+    providerConfigs,
     savedModels: data.saved_models || [],
     useCustomSmtp: data.use_custom_smtp || false,
     smtpHost: data.smtp_host || '',
@@ -119,9 +141,10 @@ export async function saveSettings(userId: string, settings: AppSettings): Promi
     .upsert({
       user_id: userId,
       ai_provider: settings.aiProvider,
-      api_key: settings.apiKey,
+      api_key: settings.apiKey, // Keep for backward compatibility
       model_name: settings.modelName,
-      api_url: settings.apiUrl,
+      api_url: settings.apiUrl, // Keep for backward compatibility
+      provider_configs: settings.providerConfigs || {},
       saved_models: settings.savedModels,
       use_custom_smtp: settings.useCustomSmtp,
       smtp_host: settings.smtpHost,

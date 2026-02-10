@@ -19,19 +19,22 @@ function generateEpubContent(chapters: Chapter[]): string {
 async function sendEmailViaAPI(
   emailContent: string,
   recipient: string,
-  settings: AppSettings
+  settings: AppSettings,
+  chapters: Chapter[]
 ): Promise<void> {
   // Use relative path if VITE_EMAIL_API_URL is not set or is a relative path
   // This allows the same code to work with both single-service and dual-service setups
   let apiUrl = import.meta.env.VITE_EMAIL_API_URL;
   
   // If not configured or is a placeholder, use relative path (works with single-service setup)
-  if (!apiUrl || apiUrl.includes('your-backend-api.com') || apiUrl.includes('localhost')) {
+  // Note: If a full URL with localhost is provided (e.g., http://localhost:3001/api/send-email),
+  // we should use it directly, not convert to relative path
+  if (!apiUrl || apiUrl.includes('your-backend-api.com')) {
     apiUrl = '/api/send-email';
   }
   
   // If it's already a relative path, use it as-is
-  // If it's an absolute URL, use it (for dual-service setup)
+  // If it's an absolute URL, use it (for dual-service setup or development with separate backend)
   const finalUrl = apiUrl.startsWith('/') ? apiUrl : apiUrl;
 
   const response = await fetch(finalUrl, {
@@ -132,7 +135,7 @@ export async function generateEpubAndEmail(chapters: Chapter[], settings: AppSet
     if (emailApiUrl || emailjsServiceId === undefined) {
       // Use backend API (either configured URL or relative path)
       console.log(`[PodRead] Sending email via backend API...`);
-      await sendEmailViaAPI(emailContent, recipient, settings);
+      await sendEmailViaAPI(emailContent, recipient, settings, chapters);
       console.log(`[PodRead] Email sent successfully via API to ${recipient}`);
     } else if (emailjsServiceId) {
       // Use EmailJS (only if API is not available and EmailJS is configured)

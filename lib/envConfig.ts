@@ -22,11 +22,21 @@ export function getDefaultSettings(): AppSettings {
   const finalApiUrl = aiApiUrl || providerDefaults.url;
   const finalModelName = aiModelName || providerDefaults.model;
 
+  // Initialize provider configs with current provider's settings
+  const providerConfigs: Partial<Record<AIProvider, { apiKey: string; apiUrl: string; modelName: string }>> = {
+    [aiProvider]: {
+      apiKey: aiApiKey,
+      apiUrl: finalApiUrl,
+      modelName: finalModelName
+    }
+  };
+
   return {
     aiProvider,
     apiKey: aiApiKey,
     modelName: finalModelName,
     apiUrl: finalApiUrl,
+    providerConfigs,
     savedModels: [],
     useCustomSmtp: !!(smtpHost && smtpUser),
     smtpHost,

@@ -12,17 +12,42 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose }) => {
   const [localSettings, setLocalSettings] = React.useState<AppSettings>({
     ...settings,
-    savedModels: settings.savedModels || []
+    savedModels: settings.savedModels || [],
+    providerConfigs: settings.providerConfigs || {}
   });
+  const [showApiKey, setShowApiKey] = React.useState(false);
+  const [showAppPassword, setShowAppPassword] = React.useState(false);
 
-  const handleProviderChange = (provider: AIProvider) => {
-    const defaults = PROVIDER_DEFAULTS[provider];
-    setLocalSettings(prev => ({
-      ...prev,
-      aiProvider: provider,
-      apiUrl: provider === 'custom' ? prev.apiUrl : defaults.url,
-      modelName: provider === 'custom' ? prev.modelName : defaults.model
-    }));
+  const handleProviderChange = (newProvider: AIProvider) => {
+    const defaults = PROVIDER_DEFAULTS[newProvider];
+    
+    setLocalSettings(prev => {
+      // Save current provider's config before switching
+      const currentProvider = prev.aiProvider;
+      const updatedProviderConfigs = {
+        ...prev.providerConfigs,
+        [currentProvider]: {
+          apiKey: prev.apiKey,
+          apiUrl: prev.apiUrl,
+          modelName: prev.modelName
+        }
+      };
+
+      // Load new provider's config or use defaults
+      const newProviderConfig = updatedProviderConfigs[newProvider];
+      const newApiKey = newProviderConfig?.apiKey || '';
+      const newApiUrl = newProviderConfig?.apiUrl || (newProvider === 'custom' ? '' : defaults.url);
+      const newModelName = newProviderConfig?.modelName || (newProvider === 'custom' ? '' : defaults.model);
+
+      return {
+        ...prev,
+        aiProvider: newProvider,
+        apiKey: newApiKey,
+        apiUrl: newApiUrl,
+        modelName: newModelName,
+        providerConfigs: updatedProviderConfigs
+      };
+    });
   };
 
   const handleSaveModel = () => {
@@ -84,13 +109,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
               {localSettings.aiProvider !== 'gemini' && localSettings.aiProvider !== 'ollama' && (
                 <div>
                   <label className="block text-xs font-medium text-stone-500 mb-1.5 uppercase">API Key</label>
-                  <input 
-                    type="password" 
-                    value={localSettings.apiKey}
-                    onChange={(e) => setLocalSettings({...localSettings, apiKey: e.target.value})}
-                    placeholder="sk-..."
-                    className="w-full px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-stone-800 outline-none"
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showApiKey ? "text" : "password"} 
+                      value={localSettings.apiKey}
+                      onChange={(e) => setLocalSettings({...localSettings, apiKey: e.target.value})}
+                      placeholder="sk-..."
+                      className="w-full px-4 py-2.5 pr-10 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-stone-800 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                    >
+                      {showApiKey ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -226,12 +269,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-xs font-medium text-stone-500 mb-1 uppercase">App Password</label>
-                      <input 
-                        type="password" 
-                        value={localSettings.smtpPass}
-                        onChange={(e) => setLocalSettings({...localSettings, smtpPass: e.target.value})}
-                        className="w-full px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-stone-800 outline-none"
-                      />
+                      <div className="relative">
+                        <input 
+                          type={showAppPassword ? "text" : "password"} 
+                          value={localSettings.smtpPass}
+                          onChange={(e) => setLocalSettings({...localSettings, smtpPass: e.target.value})}
+                          className="w-full px-3 py-2 pr-10 bg-white border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-stone-800 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAppPassword(!showAppPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                        >
+                          {showAppPassword ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -244,7 +305,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
           <button onClick={onClose} className="px-5 py-2 text-sm font-medium text-stone-600 hover:text-stone-800 transition-colors">Cancel</button>
           <button 
             onClick={() => {
-              onSave(localSettings);
+              // Update current provider's config before saving
+              const finalSettings: AppSettings = {
+                ...localSettings,
+                providerConfigs: {
+                  ...localSettings.providerConfigs,
+                  [localSettings.aiProvider]: {
+                    apiKey: localSettings.apiKey,
+                    apiUrl: localSettings.apiUrl,
+                    modelName: localSettings.modelName
+                  }
+                }
+              };
+              onSave(finalSettings);
               onClose();
             }}
             className="px-8 py-2.5 bg-stone-800 text-white rounded-xl text-sm font-bold hover:bg-stone-900 shadow-md transition-all active:scale-95"
