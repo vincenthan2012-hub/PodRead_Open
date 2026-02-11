@@ -211,6 +211,23 @@ const App: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // 验证文件类型（支持移动端）
+    const fileName = file.name.toLowerCase();
+    const fileType = file.type.toLowerCase();
+    const isValidFile = 
+      fileName.endsWith('.txt') || 
+      fileName.endsWith('.srt') ||
+      fileType === 'text/plain' ||
+      fileType === 'application/x-subrip' ||
+      fileType === 'text/srt' ||
+      fileType === ''; // 某些移动端可能不提供MIME类型，允许空类型但检查扩展名
+
+    if (!isValidFile) {
+      setStatus(prev => ({ ...prev, error: "Please upload a .txt or .srt file." }));
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
@@ -340,7 +357,7 @@ const App: React.FC = () => {
                   type="file" 
                   ref={fileInputRef} 
                   onChange={handleFileUpload} 
-                  accept=".txt,.srt" 
+                  accept=".txt,.srt,text/plain,application/x-subrip,text/srt" 
                   className="hidden" 
                 />
               </div>
