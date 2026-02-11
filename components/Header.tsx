@@ -28,14 +28,6 @@ const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onOpenSettin
         
         <nav className="flex items-center gap-1 sm:gap-4">
           <button 
-            onClick={() => onViewChange('draft')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              currentView === 'draft' ? 'bg-stone-800 text-white shadow-sm' : 'text-stone-500 hover:bg-stone-200'
-            }`}
-          >
-            Draft
-          </button>
-          <button 
             onClick={() => onViewChange('library')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
               currentView === 'library' ? 'bg-stone-800 text-white shadow-sm' : 'text-stone-500 hover:bg-stone-200'

@@ -48,7 +48,9 @@ export async function transformTranscript(transcript: string, settings: AppSetti
         messages: [
           { role: 'user', content: fullPrompt }
         ],
-        temperature: 0.7
+        temperature: 0.7,
+          maxOutputTokens: 8192,
+          thinkingConfig: { thinkingBudget: 4000 }
       })
     });
 

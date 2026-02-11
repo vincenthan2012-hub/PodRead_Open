@@ -156,6 +156,13 @@ export async function saveSettings(userId: string, settings: AppSettings): Promi
     });
 
   if (error) {
+    // 如果错误是因为 provider_configs 列不存在，提供更友好的错误信息
+    if (error.message?.includes('provider_configs') || error.code === 'PGRST204') {
+      const errorMsg = '数据库表缺少 provider_configs 列。请在 Supabase SQL Editor 中执行以下 SQL 语句：\n\nALTER TABLE user_settings ADD COLUMN IF NOT EXISTS provider_configs JSONB DEFAULT \'{}\'::jsonb;';
+      console.error('Error: provider_configs column does not exist in database.');
+      console.error('Migration SQL:', errorMsg);
+      throw new Error(errorMsg);
+    }
     console.error('Error saving settings:', error);
     throw error;
   }

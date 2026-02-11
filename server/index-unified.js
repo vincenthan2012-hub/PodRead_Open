@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFile, unlink } from 'fs/promises';
+import os from 'os';
 import Epub from 'epub-gen';
 
 // Load environment variables
@@ -19,6 +20,12 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
 
 // API Routes (must be before static file serving)
 // Health check endpoint
@@ -93,11 +100,15 @@ app.post('/api/send-email', async (req, res) => {
         const epubTitle = subject || `PodRead Collection - ${new Date().toLocaleDateString()}`;
         const tempEpubPath = path.join(__dirname, `temp_${Date.now()}.epub`);
         
+        const tocTemplatePath = path.join(__dirname, 'toc-template.html');
         const epubOptions = {
           title: epubTitle,
           author: 'PodRead',
           publisher: 'PodRead',
           lang: 'en',
+          tocTitle: 'Contents', // 设置目录页标题为"Contents"
+          appendChapterTitles: false, // 禁用自动在章节内容开头添加标题
+          customHtmlTocTemplatePath: tocTemplatePath, // 使用自定义TOC模板
           css: `
             body {
               font-family: 'Georgia', 'Times New Roman', serif;
@@ -146,10 +157,26 @@ app.post('/api/send-email', async (req, res) => {
               color: #2d3748;
             }
           `,
-          content: chapters.map((chapter, index) => ({
-            title: chapter.title || `Chapter ${index + 1}`,
-            data: formatChapterForEpub(chapter.content)
-          }))
+          content: chapters
+            .filter((chapter) => {
+              // 过滤掉没有标题或内容为空的章节
+              return chapter && chapter.title && chapter.title.trim() && chapter.content && chapter.content.trim();
+            })
+            .map((chapter, index) => {
+              // 保留文章内容中的标题，不进行移除
+              let content = chapter.content;
+              
+              // 确保内容不为空
+              if (!content.trim()) {
+                content = '<p>No content available.</p>';
+              }
+              
+              return {
+                title: chapter.title.trim(),
+                data: formatChapterForEpub(content),
+                excludeFromToc: false // 确保章节显示在目录中
+              };
+            })
         };
 
         await new Epub(epubOptions, tempEpubPath).promise;
@@ -319,6 +346,142 @@ function formatChapterForEpub(content) {
   return html;
 }
 
+// Download EPUB endpoint
+app.post('/api/download-epub', async (req, res) => {
+  console.log('[Download EPUB] Request received at /api/download-epub');
+  let tempEpubPath = null;
+  try {
+    const { chapters } = req.body;
+    console.log('[Download EPUB] Request body:', { chaptersCount: chapters?.length });
+
+    if (!chapters || !Array.isArray(chapters) || chapters.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Chapters array is required'
+      });
+    }
+
+    console.log(`[Download EPUB] Generating EPUB for ${chapters.length} chapters...`);
+
+    const epubTitle = `PodRead Collection - ${new Date().toLocaleDateString()}`;
+    // Use system temp directory for better compatibility
+    tempEpubPath = path.join(os.tmpdir(), `podread_${Date.now()}_${Math.random().toString(36).substring(7)}.epub`);
+    
+    const tocTemplatePath = path.join(__dirname, 'toc-template.html');
+    const epubOptions = {
+      title: epubTitle,
+      author: 'PodRead',
+      publisher: 'PodRead',
+      lang: 'en',
+      tocTitle: 'Contents', // 设置目录页标题为"Contents"
+      appendChapterTitles: false, // 禁用自动在章节内容开头添加标题
+      customHtmlTocTemplatePath: tocTemplatePath, // 使用自定义TOC模板
+      css: `
+        body {
+          font-family: 'Georgia', 'Times New Roman', serif;
+          line-height: 1.8;
+          color: #333;
+          max-width: 65ch;
+          margin: 0 auto;
+          padding: 2em;
+        }
+        h1 {
+          font-size: 2em;
+          font-weight: bold;
+          color: #2d3748;
+          margin-top: 1.5em;
+          margin-bottom: 0.5em;
+          border-bottom: 2px solid #e2e8f0;
+          padding-bottom: 0.3em;
+        }
+        h2 {
+          font-size: 1.5em;
+          font-weight: 600;
+          color: #2d3748;
+          margin-top: 1.2em;
+          margin-bottom: 0.4em;
+        }
+        h3 {
+          font-size: 1.2em;
+          font-weight: 500;
+          color: #4a5568;
+          margin-top: 1em;
+          margin-bottom: 0.3em;
+          font-style: italic;
+        }
+        p {
+          margin-bottom: 1em;
+          text-indent: 0;
+          line-height: 1.8;
+        }
+        p:first-of-type::first-letter {
+          font-size: 3em;
+          font-weight: bold;
+          float: left;
+          line-height: 1;
+          margin-right: 0.1em;
+          margin-top: 0.1em;
+          color: #2d3748;
+        }
+      `,
+      content: chapters
+        .filter((chapter) => {
+          // 过滤掉没有标题或内容为空的章节
+          return chapter && chapter.title && chapter.title.trim() && chapter.content && chapter.content.trim();
+        })
+        .map((chapter, index) => {
+          // 保留文章内容中的标题，不进行移除
+          let content = chapter.content;
+          
+          // 确保内容不为空
+          if (!content.trim()) {
+            content = '<p>No content available.</p>';
+          }
+          
+          return {
+            title: chapter.title.trim(),
+            data: formatChapterForEpub(content),
+            excludeFromToc: false // 确保章节显示在目录中
+          };
+        })
+    };
+
+    console.log(`[Download EPUB] Creating EPUB at ${tempEpubPath}...`);
+    await new Epub(epubOptions, tempEpubPath).promise;
+    console.log(`[Download EPUB] EPUB created successfully`);
+    
+    // Read the generated EPUB file
+    const epubBuffer = await readFile(tempEpubPath);
+    console.log(`[Download EPUB] EPUB file read, size: ${epubBuffer.length} bytes`);
+    
+    // Clean up temp file
+    await unlink(tempEpubPath).catch((err) => {
+      console.warn(`[Download EPUB] Failed to delete temp file: ${err.message}`);
+    });
+    tempEpubPath = null;
+    
+    // Send EPUB file as response
+    const filename = `PodRead_Collection_${new Date().toISOString().slice(0, 10)}.epub`;
+    res.setHeader('Content-Type', 'application/epub+zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(epubBuffer);
+    console.log(`[Download EPUB] EPUB sent to client successfully`);
+  } catch (error) {
+    console.error('[Download EPUB] Error details:', error);
+    console.error('[Download EPUB] Stack:', error.stack);
+    
+    // Clean up temp file if it exists
+    if (tempEpubPath) {
+      await unlink(tempEpubPath).catch(() => {});
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate EPUB: ' + (error.message || 'Unknown error')
+    });
+  }
+});
+
 // Serve static files from dist directory (frontend build)
 // This must be after API routes
 const distPath = path.join(__dirname, '..', 'dist');
@@ -328,6 +491,7 @@ app.use(express.static(distPath));
 app.get('*', (req, res) => {
   // Don't serve index.html for API routes
   if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+    console.log(`[Router] GET request to API route ${req.path} - returning 404`);
     return res.status(404).json({
       success: false,
       error: 'Endpoint not found'
@@ -352,6 +516,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Unified server running on port ${PORT}`);
   console.log(`Frontend: http://localhost:${PORT}`);
   console.log(`API: http://localhost:${PORT}/api/send-email`);
+  console.log(`Download EPUB: http://localhost:${PORT}/api/download-epub`);
   console.log(`Health: http://localhost:${PORT}/health`);
 });
 

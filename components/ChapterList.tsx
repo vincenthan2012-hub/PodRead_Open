@@ -31,12 +31,35 @@ const ChapterList: React.FC<ChapterListProps> = ({
                 ? 'bg-white border-stone-200 shadow-sm' 
                 : 'hover:bg-white/50 border-transparent'
             }`}
-            onClick={() => onSelect(chapter.id)}
+            onClick={(e) => {
+              // 如果点击的是checkbox或其容器，不触发onSelect
+              if ((e.target as HTMLElement).closest('input[type="checkbox"]') || (e.target as HTMLElement).closest('.checkbox-container')) {
+                return;
+              }
+              // 如果点击的是删除按钮，不触发onSelect
+              if ((e.target as HTMLElement).closest('button[class*="opacity-0"]')) {
+                return;
+              }
+              // 如果已经选中，再次点击则进入文章；如果未选中，则只选中
+              if (selectedId === chapter.id) {
+                // 已选中，再次点击进入文章
+                onSelect(chapter.id);
+              } else {
+                // 未选中，只选中不进入
+                onSelect(chapter.id);
+              }
+            }}
           >
-            <div onClick={(e) => e.stopPropagation()}>
+            <div 
+              className="checkbox-container"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelection(chapter.id);
+              }}
+            >
               <input 
                 type="checkbox"
-                checked={chapter.selected}
+                checked={chapter.selected || false}
                 onChange={(e) => {
                   e.stopPropagation();
                   onToggleSelection(chapter.id);
@@ -48,7 +71,9 @@ const ChapterList: React.FC<ChapterListProps> = ({
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium text-stone-800 truncate">{chapter.title}</h4>
+              <h4 className={`text-sm font-medium truncate ${
+                selectedId === chapter.id ? 'text-stone-900 font-semibold' : 'text-stone-800'
+              }`}>{chapter.title}</h4>
               <p className="text-xs text-stone-400 mt-0.5">
                 {new Date(chapter.createdAt).toLocaleDateString()}
               </p>

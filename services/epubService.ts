@@ -158,21 +158,46 @@ export async function generateEpubAndEmail(chapters: Chapter[], settings: AppSet
 }
 
 /**
- * Generates a mock EPUB (actually a single text/markdown file for simplicity) 
- * that the user can download directly.
+ * Downloads EPUB file by calling backend API
  */
 export async function downloadEpub(chapters: Chapter[]): Promise<void> {
-  let fullContent = chapters.map(c => c.content).join('\n\n--- NEXT CHAPTER ---\n\n');
-  const blob = new Blob([fullContent], { type: 'text/markdown' });
+  // Use relative path if VITE_EMAIL_API_URL is not set or is a relative path
+  let apiUrl = import.meta.env.VITE_EMAIL_API_URL;
+  
+  // If not configured or is a placeholder, use relative path (works with single-service setup)
+  if (!apiUrl || apiUrl.includes('your-backend-api.com')) {
+    apiUrl = '/api/download-epub';
+  } else {
+    // Extract base URL and use it for download endpoint
+    const baseUrl = apiUrl.replace('/api/send-email', '');
+    apiUrl = `${baseUrl}/api/download-epub`;
+  }
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      chapters: chapters,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`EPUB download error: ${response.status} - ${errorText}`);
+  }
+
+  // Get the EPUB file as blob
+  const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `PodRead_Collection_${new Date().toISOString().slice(0, 10)}.md`;
+  a.download = `PodRead_Collection_${new Date().toISOString().slice(0, 10)}.epub`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  return Promise.resolve();
 }
 
 export function downloadAsTxt(chapter: Chapter) {

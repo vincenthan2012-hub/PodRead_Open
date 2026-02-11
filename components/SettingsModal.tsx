@@ -208,28 +208,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
             </div>
             
             <div className="space-y-4">
-              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  <strong>Browser Note:</strong> Direct SMTP from a client-side app is simulated. In a production environment, this would securely relay via our cloud bridge.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-semibold text-stone-800">Custom SMTP Relay</p>
-                  <p className="text-xs text-stone-400">Configure your personal mail server for delivery</p>
-                </div>
-                <button 
-                  onClick={() => setLocalSettings({...localSettings, useCustomSmtp: !localSettings.useCustomSmtp})}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${localSettings.useCustomSmtp ? 'bg-stone-800' : 'bg-stone-200'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSettings.useCustomSmtp ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-
               <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-500 mb-1 uppercase">Email Address</label>

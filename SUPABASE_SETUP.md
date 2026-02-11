@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   api_key TEXT DEFAULT '',
   model_name TEXT DEFAULT '',
   api_url TEXT DEFAULT '',
+  provider_configs JSONB DEFAULT '{}'::jsonb,
   saved_models JSONB DEFAULT '[]'::jsonb,
   use_custom_smtp BOOLEAN DEFAULT FALSE,
   smtp_host TEXT DEFAULT '',
@@ -95,6 +96,16 @@ CREATE POLICY "Users can insert their own settings"
 CREATE POLICY "Users can update their own settings"
   ON user_settings FOR UPDATE
   USING (auth.uid() = user_id);
+```
+
+### 迁移现有数据库（如果表已存在）
+
+如果您的 `user_settings` 表已经存在但没有 `provider_configs` 列，请执行以下 SQL 来添加该列：
+
+```sql
+-- 添加 provider_configs 列（如果不存在）
+ALTER TABLE user_settings 
+ADD COLUMN IF NOT EXISTS provider_configs JSONB DEFAULT '{}'::jsonb;
 ```
 
 ## 4. 配置环境变量

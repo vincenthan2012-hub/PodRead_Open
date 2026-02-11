@@ -12,6 +12,33 @@ const BookPreview: React.FC<BookPreviewProps> = ({ chapter, onClose, onPrint }) 
   // We want to track if we've already rendered the first paragraph for the drop cap
   let hasRenderedFirstParagraph = false;
 
+  // Function to convert Markdown formatting to HTML
+  const formatText = (text: string): React.ReactNode => {
+    // Escape HTML to prevent XSS
+    let formatted = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    
+    // Process strikethrough (~~text~~) first
+    formatted = formatted.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    
+    // Process bold (**text** or __text__) - must be before single * or _
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    
+    // Process inline code (`code`) - must be before single * or _
+    formatted = formatted.replace(/`(.+?)`/g, '<code>$1</code>');
+    
+    // Process italic (*text* or _text_) - must be after ** and __
+    // Match single * or _ that are not part of ** or __
+    // Use a simple approach: match single * or _ that don't have another * or _ immediately before/after
+    formatted = formatted.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
+    formatted = formatted.replace(/(?<!_)_([^_\n]+?)_(?!_)/g, '<em>$1</em>');
+    
+    return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#FCFBF7] shadow-2xl rounded-2xl border border-stone-200 overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-white">
@@ -41,13 +68,13 @@ const BookPreview: React.FC<BookPreviewProps> = ({ chapter, onClose, onPrint }) 
             const trimmed = line.trim();
             
             if (trimmed.startsWith('# ')) {
-              return <h1 key={i} className="text-4xl font-bold display mb-12 text-stone-900 leading-tight">{trimmed.replace('# ', '')}</h1>;
+              return <h1 key={i} className="text-4xl font-bold display mb-12 text-stone-900 leading-tight">{formatText(trimmed.replace('# ', ''))}</h1>;
             }
             if (trimmed.startsWith('## ')) {
-              return <h2 key={i} className="text-2xl font-semibold display mt-12 mb-6 text-stone-800 border-b border-stone-100 pb-2">{trimmed.replace('## ', '')}</h2>;
+              return <h2 key={i} className="text-2xl font-semibold display mt-12 mb-6 text-stone-800 border-b border-stone-100 pb-2">{formatText(trimmed.replace('## ', ''))}</h2>;
             }
             if (trimmed.startsWith('### ')) {
-              return <h3 key={i} className="text-xl font-medium serif italic mt-8 mb-4 text-stone-700">{trimmed.replace('### ', '')}</h3>;
+              return <h3 key={i} className="text-xl font-medium serif italic mt-8 mb-4 text-stone-700">{formatText(trimmed.replace('### ', ''))}</h3>;
             }
             if (trimmed === '') return <div key={i} className="h-4" />;
 
@@ -56,13 +83,13 @@ const BookPreview: React.FC<BookPreviewProps> = ({ chapter, onClose, onPrint }) 
               hasRenderedFirstParagraph = true;
               return (
                 <p key={i} className="mb-6 first-letter:text-5xl first-letter:font-bold first-letter:mr-3 first-letter:float-left first-letter:leading-none first-letter:text-stone-800">
-                  {trimmed}
+                  {formatText(trimmed)}
                 </p>
               );
             }
 
             // Standard paragraphs
-            return <p key={i} className="mb-6 indent-0 leading-relaxed text-stone-700">{trimmed}</p>;
+            return <p key={i} className="mb-6 indent-0 leading-relaxed text-stone-700">{formatText(trimmed)}</p>;
           })}
         </article>
       </div>

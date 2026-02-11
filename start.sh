@@ -143,43 +143,40 @@ cleanup() {
 # 设置信号捕获
 trap cleanup SIGINT SIGTERM
 
-# 启动后端服务器（后台运行）
-echo -e "${BLUE}启动后端服务器 (端口 3001)...${NC}"
-cd "$SERVER_DIR"
-PORT=3001 node index.js > /tmp/podread-backend.log 2>&1 &
+# 启动统一服务器（后台运行）
+echo -e "${BLUE}启动统一服务器 (端口 3000)...${NC}"
+cd "$PROJECT_DIR"
+# 先构建前端
+npm run build
+# 启动统一服务器（包含前端和后端）
+node server/index-unified.js > /tmp/podread-unified.log 2>&1 &
 BACKEND_PID=$!
 
-# 等待后端服务器启动
-sleep 2
+# 等待统一服务器启动
+sleep 3
 
-# 检查后端是否启动成功
+# 检查统一服务器是否启动成功
 if ! kill -0 $BACKEND_PID 2>/dev/null; then
-    echo -e "${RED}❌ 后端服务器启动失败，请查看日志: /tmp/podread-backend.log${NC}"
+    echo -e "${RED}❌ 统一服务器启动失败，请查看日志: /tmp/podread-unified.log${NC}"
+    cat /tmp/podread-unified.log
     exit 1
 fi
 
-echo -e "${GREEN}✓ 后端服务器已启动 (PID: $BACKEND_PID)${NC}"
-echo ""
-
-# 启动前端开发服务器（前台运行，可以看到输出）
-echo -e "${BLUE}启动前端开发服务器 (端口 3000)...${NC}"
+echo -e "${GREEN}✓ 统一服务器已启动 (PID: $BACKEND_PID)${NC}"
 echo ""
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  ✅ 所有服务器已启动${NC}"
+echo -e "${GREEN}  ✅ 服务器已启动${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "${BLUE}前端: http://localhost:3000${NC}"
-echo -e "${BLUE}后端 API: http://localhost:3001/api/send-email${NC}"
-echo -e "${BLUE}健康检查: http://localhost:3001/health${NC}"
+echo -e "${BLUE}后端 API: http://localhost:3000/api/send-email${NC}"
+echo -e "${BLUE}下载 EPUB: http://localhost:3000/api/download-epub${NC}"
+echo -e "${BLUE}健康检查: http://localhost:3000/health${NC}"
 echo ""
-echo -e "${YELLOW}提示: 查看后端日志请运行: tail -f /tmp/podread-backend.log${NC}"
-echo -e "${YELLOW}按 Ctrl+C 停止所有服务器${NC}"
+echo -e "${YELLOW}提示: 查看服务器日志请运行: tail -f /tmp/podread-unified.log${NC}"
+echo -e "${YELLOW}按 Ctrl+C 停止服务器${NC}"
 echo ""
 
-cd "$PROJECT_DIR"
-# 前台运行前端服务器（这样可以看到 Vite 的输出）
-npm run dev
-
-# 如果前端服务器退出，执行清理
-cleanup
+# 等待服务器运行
+wait $BACKEND_PID
 

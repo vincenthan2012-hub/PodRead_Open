@@ -13,6 +13,24 @@ import { Chapter, AppSettings, GenerationStatus, ViewMode } from './types';
 import { PROVIDER_DEFAULTS } from './constants';
 import type { User } from '@supabase/supabase-js';
 
+// 从content中提取标题的辅助函数
+const extractTitleFromContent = (content: string): string => {
+  if (!content) return 'Untitled Chapter';
+  
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // 查找第一个以 # 开头的行作为标题
+    if (trimmed.startsWith('# ')) {
+      const title = trimmed.replace('# ', '').trim();
+      if (title) return title;
+    }
+  }
+  
+  // 如果找不到标题，返回默认值
+  return 'Untitled Chapter';
+};
+
 const App: React.FC = () => {
   // Auth state
   const [user, setUser] = useState<User | null>(null);
@@ -32,6 +50,7 @@ const App: React.FC = () => {
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isInitialLoad = useRef(true);
 
   // Initialize auth state
   useEffect(() => {
@@ -58,6 +77,7 @@ const App: React.FC = () => {
       } else {
         setShowAuth(false);
         setIsSettingsLoaded(false);
+        isInitialLoad.current = true; // 重置初始加载标志
         loadUserData(session.user.id);
       }
     });
@@ -69,7 +89,22 @@ const App: React.FC = () => {
   const loadUserData = async (userId: string) => {
     try {
       // Load chapters
-      const userChapters = await getChapters(userId);
+      let userChapters = await getChapters(userId);
+      
+      // 修复标题：如果标题是"Untitled Chapter"，尝试从content中重新提取
+      userChapters = await Promise.all(userChapters.map(async (chapter) => {
+        if (chapter.title === 'Untitled Chapter' && chapter.content) {
+          const extractedTitle = extractTitleFromContent(chapter.content);
+          if (extractedTitle !== 'Untitled Chapter') {
+            // 更新数据库中的标题
+            const updatedChapter = { ...chapter, title: extractedTitle };
+            await saveChapter(userId, updatedChapter);
+            return updatedChapter;
+          }
+        }
+        return chapter;
+      }));
+      
       setChapters(userChapters);
 
       // Load settings
@@ -82,20 +117,33 @@ const App: React.FC = () => {
       }
       // 标记设置已加载，允许后续保存
       setIsSettingsLoaded(true);
+      // 重置初始加载标志，以便后续的修改可以保存
+      isInitialLoad.current = false;
     } catch (error) {
       console.error('Error loading user data:', error);
       setStatus(prev => ({ ...prev, error: 'Failed to load your data' }));
       // 即使出错也标记为已加载，避免无限等待
       setIsSettingsLoaded(true);
+      isInitialLoad.current = false;
     }
   };
 
   // Save settings to Supabase
-  // 只有在设置已加载后才保存，避免在页面刷新时用默认值覆盖数据库中的设置
+  // 使用 ref 来跟踪是否是初始加载，避免在初始加载时保存
   useEffect(() => {
+    // 如果是初始加载，跳过保存
+    if (isInitialLoad.current) {
+      if (isSettingsLoaded) {
+        isInitialLoad.current = false;
+      }
+      return;
+    }
+    
+    // 只有在设置已加载且不是初始加载时才保存
     if (user && settings && isSettingsLoaded) {
       saveSettings(user.id, settings).catch(error => {
         console.error('Error saving settings:', error);
+        setStatus(prev => ({ ...prev, error: 'Failed to save settings' }));
       });
     }
   }, [settings, user, isSettingsLoaded]);
@@ -134,9 +182,12 @@ const App: React.FC = () => {
     try {
       const transformedText = await transformTranscript(transcriptInput, settings);
       
+      // 从content中提取真实标题
+      const extractedTitle = extractTitleFromContent(transformedText);
+      
       const newChapter: Chapter = {
         id: crypto.randomUUID(),
-        title: transformedText.split('\n')[0].replace('# ', '').trim() || 'Untitled Chapter',
+        title: extractedTitle,
         content: transformedText,
         originalTranscript: transcriptInput,
         createdAt: Date.now(),
@@ -202,8 +253,9 @@ const App: React.FC = () => {
     setIsDownloading(true);
     try {
       await downloadEpub(selectedChapters);
-    } catch (err) {
-      alert("Failed to generate EPUB download.");
+    } catch (err: any) {
+      console.error('Download EPUB error:', err);
+      alert(`Failed to generate EPUB download: ${err.message || 'Unknown error'}`);
     } finally {
       setIsDownloading(false);
     }
@@ -330,38 +382,51 @@ const App: React.FC = () => {
         {currentView === 'library' && (
           <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
-              <h2 className="text-3xl font-bold text-stone-800 display">Private Library</h2>
-              {chapters.some(c => c.selected) && (
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={handleDownloadEpub}
-                    disabled={isDownloading}
-                    className="px-3 py-2 bg-stone-100 text-stone-600 rounded-xl text-xs font-bold hover:bg-stone-200 transition-all flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download
-                  </button>
-                  <button 
-                    onClick={handlePushToEmail}
-                    disabled={isEmailing}
-                    className="px-4 py-2 bg-stone-800 text-white rounded-xl text-xs font-bold hover:bg-stone-900 transition-all shadow-md active:scale-95 flex items-center gap-2"
-                  >
-                    {isEmailing ? (
-                      <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : (
+              <div className="flex items-center gap-4">
+                <h2 className="text-3xl font-bold text-stone-800 display">Private Library</h2>
+                <button 
+                  onClick={() => setCurrentView('draft')}
+                  className="p-2 bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200 transition-all"
+                  title="Back to Drafting Room"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                {chapters.some(c => c.selected) && (
+                  <>
+                    <button 
+                      onClick={handleDownloadEpub}
+                      disabled={isDownloading}
+                      className="px-3 py-2 bg-stone-100 text-stone-600 rounded-xl text-xs font-bold hover:bg-stone-200 transition-all flex items-center gap-2"
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
-                    )}
-                    {isEmailing ? 'Sending...' : 'Push to Email'}
-                  </button>
-                </div>
-              )}
+                      Download
+                    </button>
+                    <button 
+                      onClick={handlePushToEmail}
+                      disabled={isEmailing}
+                      className="px-3 py-2 bg-stone-100 text-stone-600 rounded-xl text-xs font-bold hover:bg-stone-200 transition-all flex items-center gap-2"
+                    >
+                      {isEmailing ? (
+                        <svg className="animate-spin h-3.5 w-3.5 text-stone-600" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                      {isEmailing ? 'Sending...' : 'Push to Email'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {chapters.length === 0 ? (
@@ -374,8 +439,12 @@ const App: React.FC = () => {
                 chapters={chapters}
                 selectedId={activeChapterId}
                 onSelect={(id) => {
-                  setActiveChapterId(id);
-                  setCurrentView('reader');
+                  // 如果点击的是已选中的文章，则进入阅读视图；否则只选中
+                  if (activeChapterId === id) {
+                    setCurrentView('reader');
+                  } else {
+                    setActiveChapterId(id);
+                  }
                 }}
                 onToggleSelection={handleToggleSelection}
                 onDelete={handleDeleteChapter}
@@ -399,7 +468,19 @@ const App: React.FC = () => {
       {isSettingsOpen && (
         <SettingsModal 
           settings={settings} 
-          onSave={setSettings} 
+          onSave={async (newSettings) => {
+            setSettings(newSettings);
+            // 显式保存到数据库，确保保存成功
+            if (user) {
+              try {
+                await saveSettings(user.id, newSettings);
+                console.log('Settings saved successfully');
+              } catch (error) {
+                console.error('Error saving settings:', error);
+                setStatus(prev => ({ ...prev, error: 'Failed to save settings. Please try again.' }));
+              }
+            }
+          }} 
           onClose={() => setIsSettingsOpen(false)} 
         />
       )}
