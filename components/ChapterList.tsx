@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Chapter } from '../types';
 
 interface ChapterListProps {
@@ -8,6 +8,7 @@ interface ChapterListProps {
   onToggleSelection: (id: string) => void;
   selectedId: string | null;
   onDelete: (id: string) => void;
+  onUpdateTitle: (id: string, newTitle: string) => void;
 }
 
 const ChapterList: React.FC<ChapterListProps> = ({ 
@@ -15,8 +16,48 @@ const ChapterList: React.FC<ChapterListProps> = ({
   onSelect, 
   onToggleSelection, 
   selectedId,
-  onDelete 
+  onDelete,
+  onUpdateTitle
 }) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingId]);
+
+  const handleTitleClick = (e: React.MouseEvent, chapter: Chapter) => {
+    e.stopPropagation();
+    setEditingId(chapter.id);
+    setEditingTitle(chapter.title);
+  };
+
+  const handleTitleBlur = (id: string) => {
+    if (editingTitle.trim()) {
+      onUpdateTitle(id, editingTitle.trim());
+    }
+    setEditingId(null);
+    setEditingTitle('');
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (editingTitle.trim()) {
+        onUpdateTitle(id, editingTitle.trim());
+      }
+      setEditingId(null);
+      setEditingTitle('');
+    } else if (e.key === 'Escape') {
+      setEditingId(null);
+      setEditingTitle('');
+    }
+  };
+
   if (chapters.length === 0) return null;
 
   return (
@@ -71,9 +112,26 @@ const ChapterList: React.FC<ChapterListProps> = ({
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className={`text-sm font-medium truncate ${
-                selectedId === chapter.id ? 'text-stone-900 font-semibold' : 'text-stone-800'
-              }`}>{chapter.title}</h4>
+              {editingId === chapter.id ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onBlur={() => handleTitleBlur(chapter.id)}
+                  onKeyDown={(e) => handleTitleKeyDown(e, chapter.id)}
+                  className="text-sm font-medium w-full px-2 py-1 border border-stone-300 rounded focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-stone-500"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <h4 
+                  className={`text-sm font-medium truncate cursor-text hover:text-stone-900 ${
+                    selectedId === chapter.id ? 'text-stone-900 font-semibold' : 'text-stone-800'
+                  }`}
+                  onClick={(e) => handleTitleClick(e, chapter)}
+                  title="点击编辑标题"
+                >{chapter.title}</h4>
+              )}
               <p className="text-xs text-stone-400 mt-0.5">
                 {new Date(chapter.createdAt).toLocaleDateString()}
               </p>

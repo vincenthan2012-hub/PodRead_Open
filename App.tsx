@@ -308,6 +308,22 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateTitle = async (id: string, newTitle: string) => {
+    if (!user) return;
+    
+    const chapter = chapters.find(c => c.id === id);
+    if (!chapter || chapter.title === newTitle) return;
+    
+    try {
+      const updatedChapter = { ...chapter, title: newTitle };
+      await saveChapterToDB(updatedChapter);
+      setChapters(prev => prev.map(c => c.id === id ? updatedChapter : c));
+    } catch (error) {
+      console.error('Error updating title:', error);
+      setStatus(prev => ({ ...prev, error: 'Failed to update title' }));
+    }
+  };
+
   const activeChapter = chapters.find(c => c.id === activeChapterId);
 
   // Show loading or auth modal
@@ -465,6 +481,7 @@ const App: React.FC = () => {
                 }}
                 onToggleSelection={handleToggleSelection}
                 onDelete={handleDeleteChapter}
+                onUpdateTitle={handleUpdateTitle}
               />
             )}
           </div>

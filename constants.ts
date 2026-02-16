@@ -26,8 +26,10 @@ Format the output as:
 ## [Section Title]
 [Content]
 [Repeat Sections...]
-### Concluding Reflections
-[Summary/Takeaways]`;
+### [Specific Concluding Heading Based on Content]
+[Summary/Takeaways]
+
+Important: The final heading (###) should be specific and contextual to the chapter's content, not a generic "Concluding Reflections". Create a meaningful heading that captures the essence of the chapter's conclusion, such as "The Path Forward", "Lessons Learned", "Key Takeaways", or any other heading that naturally emerges from the content.`;
 
 export const PROVIDER_DEFAULTS = {
   gemini: {
