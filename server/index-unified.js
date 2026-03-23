@@ -113,7 +113,7 @@ app.post('/api/send-email', async (req, res) => {
             body {
               font-family: 'Georgia', 'Times New Roman', serif;
               line-height: 1.8;
-              color: #333;
+              color: #000;
               max-width: 65ch;
               margin: 0 auto;
               padding: 2em;
@@ -121,7 +121,7 @@ app.post('/api/send-email', async (req, res) => {
             h1 {
               font-size: 2em;
               font-weight: bold;
-              color: #2d3748;
+              color: #000;
               margin-top: 1.5em;
               margin-bottom: 0.5em;
               border-bottom: 2px solid #e2e8f0;
@@ -130,14 +130,14 @@ app.post('/api/send-email', async (req, res) => {
             h2 {
               font-size: 1.5em;
               font-weight: 600;
-              color: #2d3748;
+              color: #000;
               margin-top: 1.2em;
               margin-bottom: 0.4em;
             }
             h3 {
               font-size: 1.2em;
               font-weight: 500;
-              color: #4a5568;
+              color: #000;
               margin-top: 1em;
               margin-bottom: 0.3em;
               font-style: italic;
@@ -154,7 +154,7 @@ app.post('/api/send-email', async (req, res) => {
               line-height: 1;
               margin-right: 0.1em;
               margin-top: 0.1em;
-              color: #2d3748;
+              color: #000;
             }
           `,
           content: chapters
@@ -219,7 +219,7 @@ app.post('/api/send-email', async (req, res) => {
             body {
               font-family: 'Georgia', 'Times New Roman', serif;
               line-height: 1.8;
-              color: #333;
+              color: #000;
               max-width: 800px;
               margin: 0 auto;
               padding: 20px;
@@ -232,7 +232,7 @@ app.post('/api/send-email', async (req, res) => {
               box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
             h1 {
-              color: #2d3748;
+              color: #000;
               border-bottom: 2px solid #e2e8f0;
               padding-bottom: 10px;
             }
@@ -380,7 +380,7 @@ app.post('/api/download-epub', async (req, res) => {
         body {
           font-family: 'Georgia', 'Times New Roman', serif;
           line-height: 1.8;
-          color: #333;
+          color: #000;
           max-width: 65ch;
           margin: 0 auto;
           padding: 2em;
@@ -388,7 +388,7 @@ app.post('/api/download-epub', async (req, res) => {
         h1 {
           font-size: 2em;
           font-weight: bold;
-          color: #2d3748;
+          color: #000;
           margin-top: 1.5em;
           margin-bottom: 0.5em;
           border-bottom: 2px solid #e2e8f0;
@@ -397,14 +397,14 @@ app.post('/api/download-epub', async (req, res) => {
         h2 {
           font-size: 1.5em;
           font-weight: 600;
-          color: #2d3748;
+          color: #000;
           margin-top: 1.2em;
           margin-bottom: 0.4em;
         }
         h3 {
           font-size: 1.2em;
           font-weight: 500;
-          color: #4a5568;
+          color: #000;
           margin-top: 1em;
           margin-bottom: 0.3em;
           font-style: italic;
@@ -421,7 +421,7 @@ app.post('/api/download-epub', async (req, res) => {
           line-height: 1;
           margin-right: 0.1em;
           margin-top: 0.1em;
-          color: #2d3748;
+          color: #000;
         }
       `,
       content: chapters

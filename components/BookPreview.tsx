@@ -68,13 +68,13 @@ const BookPreview: React.FC<BookPreviewProps> = ({ chapter, onClose, onPrint }) 
             const trimmed = line.trim();
             
             if (trimmed.startsWith('# ')) {
-              return <h1 key={i} className="text-4xl font-bold display mb-12 text-stone-900 leading-tight">{formatText(trimmed.replace('# ', ''))}</h1>;
+              return <h1 key={i} className="text-4xl font-bold display mb-12 text-black leading-tight">{formatText(trimmed.replace('# ', ''))}</h1>;
             }
             if (trimmed.startsWith('## ')) {
-              return <h2 key={i} className="text-2xl font-semibold display mt-12 mb-6 text-stone-800 border-b border-stone-100 pb-2">{formatText(trimmed.replace('## ', ''))}</h2>;
+              return <h2 key={i} className="text-2xl font-semibold display mt-12 mb-6 text-black border-b border-stone-100 pb-2">{formatText(trimmed.replace('## ', ''))}</h2>;
             }
             if (trimmed.startsWith('### ')) {
-              return <h3 key={i} className="text-xl font-medium serif italic mt-8 mb-4 text-stone-700">{formatText(trimmed.replace('### ', ''))}</h3>;
+              return <h3 key={i} className="text-xl font-medium serif italic mt-8 mb-4 text-black">{formatText(trimmed.replace('### ', ''))}</h3>;
             }
             if (trimmed === '') return <div key={i} className="h-4" />;
 
@@ -82,14 +82,14 @@ const BookPreview: React.FC<BookPreviewProps> = ({ chapter, onClose, onPrint }) 
             if (!hasRenderedFirstParagraph) {
               hasRenderedFirstParagraph = true;
               return (
-                <p key={i} className="mb-6 first-letter:text-5xl first-letter:font-bold first-letter:mr-3 first-letter:float-left first-letter:leading-none first-letter:text-stone-800">
+                <p key={i} className="mb-6 first-letter:text-5xl first-letter:font-bold first-letter:mr-3 first-letter:float-left first-letter:leading-none first-letter:text-black">
                   {formatText(trimmed)}
                 </p>
               );
             }
 
             // Standard paragraphs
-            return <p key={i} className="mb-6 indent-0 leading-relaxed text-stone-700">{formatText(trimmed)}</p>;
+            return <p key={i} className="mb-6 indent-0 leading-relaxed text-black">{formatText(trimmed)}</p>;
           })}
         </article>
       </div>

@@ -93,7 +93,7 @@ app.post('/api/send-email', async (req, res) => {
             body {
               font-family: 'Georgia', 'Times New Roman', serif;
               line-height: 1.8;
-              color: #333;
+              color: #000;
               max-width: 800px;
               margin: 0 auto;
               padding: 20px;
@@ -106,7 +106,7 @@ app.post('/api/send-email', async (req, res) => {
               box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
             h1 {
-              color: #2d3748;
+              color: #000;
               border-bottom: 2px solid #e2e8f0;
               padding-bottom: 10px;
             }
