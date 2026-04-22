@@ -23,7 +23,10 @@ const extractTitleFromContent = (content: string): string => {
     // 查找第一个以 # 开头的行作为标题
     if (trimmed.startsWith('# ')) {
       const title = trimmed.replace('# ', '').trim();
-      if (title) return title;
+      if (title) {
+        // 去除标题中的 Markdown 格式符号（如 **Bold** -> Bold）
+        return title.replace(/(\*\*|__|\*|_|`|~~)/g, '');
+      }
     }
   }
   

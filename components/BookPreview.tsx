@@ -20,21 +20,23 @@ const BookPreview: React.FC<BookPreviewProps> = ({ chapter, onClose, onPrint }) 
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
     
-    // Process strikethrough (~~text~~) first
-    formatted = formatted.replace(/~~(.+?)~~/g, '<del>$1</del>');
-    
-    // Process bold (**text** or __text__) - must be before single * or _
+    // Process bold-italic (***text*** or ___text___)
+    formatted = formatted.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    formatted = formatted.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+
+    // Process bold (**text** or __text__)
     formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
     
-    // Process inline code (`code`) - must be before single * or _
+    // Process inline code (`code`)
     formatted = formatted.replace(/`(.+?)`/g, '<code>$1</code>');
     
-    // Process italic (*text* or _text_) - must be after ** and __
-    // Match single * or _ that are not part of ** or __
-    // Use a simple approach: match single * or _ that don't have another * or _ immediately before/after
+    // Process italic (*text* or _text_)
     formatted = formatted.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
     formatted = formatted.replace(/(?<!_)_([^_\n]+?)_(?!_)/g, '<em>$1</em>');
+
+    // Process strikethrough (~~text~~)
+    formatted = formatted.replace(/~~(.+?)~~/g, '<del>$1</del>');
     
     return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
   };

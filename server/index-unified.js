@@ -87,10 +87,10 @@ app.post('/api/send-email', async (req, res) => {
       });
     }
 
-    // Convert content to HTML (preserve line breaks)
+    // Convert content to HTML (preserve line breaks and support markdown)
     const htmlContent = content
       .split('\n')
-      .map(line => line.trim() ? `<p>${escapeHtml(line)}</p>` : '<br>')
+      .map(line => line.trim() ? `<p>${formatMarkdownToHtml(line)}</p>` : '<br>')
       .join('');
 
     // Generate EPUB if chapters are provided
@@ -280,6 +280,7 @@ app.post('/api/send-email', async (req, res) => {
 
 // Helper function to escape HTML
 function escapeHtml(text) {
+  if (typeof text !== 'string') return '';
   const map = {
     '&': '&amp;',
     '<': '&lt;',
@@ -288,6 +289,35 @@ function escapeHtml(text) {
     "'": '&#039;'
   };
   return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Helper function to convert basic markdown to HTML
+function formatMarkdownToHtml(text) {
+  if (!text) return '';
+  
+  // First escape HTML to prevent XSS
+  let formatted = escapeHtml(text);
+  
+  // Process bold-italic (***text*** or ___text___)
+  formatted = formatted.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  formatted = formatted.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+
+  // Process bold (**text** or __text__)
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  
+  // Process italic (*text* or _text_)
+  // Note: Node.js supports lookbehind since v12
+  formatted = formatted.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
+  formatted = formatted.replace(/(?<!_)_([^_\n]+?)_(?!_)/g, '<em>$1</em>');
+
+  // Process inline code (`code`)
+  formatted = formatted.replace(/`(.+?)`/g, '<code>$1</code>');
+  
+  // Process strikethrough (~~text~~)
+  formatted = formatted.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  
+  return formatted;
 }
 
 // Helper function to format chapter content for EPUB (preserve formatting)
@@ -316,26 +346,26 @@ function formatChapterForEpub(content) {
         html += '</p>\n';
         inParagraph = false;
       }
-      html += `<h1>${escapeHtml(line.substring(2))}</h1>\n`;
+      html += `<h1>${formatMarkdownToHtml(line.substring(2))}</h1>\n`;
     } else if (line.startsWith('## ')) {
       if (inParagraph) {
         html += '</p>\n';
         inParagraph = false;
       }
-      html += `<h2>${escapeHtml(line.substring(3))}</h2>\n`;
+      html += `<h2>${formatMarkdownToHtml(line.substring(3))}</h2>\n`;
     } else if (line.startsWith('### ')) {
       if (inParagraph) {
         html += '</p>\n';
         inParagraph = false;
       }
-      html += `<h3>${escapeHtml(line.substring(4))}</h3>\n`;
+      html += `<h3>${formatMarkdownToHtml(line.substring(4))}</h3>\n`;
     } else {
       // Regular paragraph
       if (!inParagraph) {
         html += '<p>';
         inParagraph = true;
       }
-      html += escapeHtml(line) + ' ';
+      html += formatMarkdownToHtml(line) + ' ';
     }
   }
   
