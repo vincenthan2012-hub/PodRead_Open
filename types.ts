@@ -8,6 +8,14 @@ export interface Chapter {
   selected?: boolean;
 }
 
+export interface BatchFile {
+  id: string;
+  name: string;
+  content: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  error?: string;
+}
+
 export type AIProvider = 'gemini' | 'deepseek' | 'siliconflow' | 'openrouter' | 'ollama' | 'custom';
 
 export type ViewMode = 'draft' | 'library' | 'reader';
