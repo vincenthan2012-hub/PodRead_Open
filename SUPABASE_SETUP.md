@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS chapters (
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   original_transcript TEXT NOT NULL,
+  source_file_name TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   selected BOOLEAN DEFAULT FALSE
 );
@@ -106,6 +107,10 @@ CREATE POLICY "Users can update their own settings"
 -- 添加 provider_configs 列（如果不存在）
 ALTER TABLE user_settings 
 ADD COLUMN IF NOT EXISTS provider_configs JSONB DEFAULT '{}'::jsonb;
+
+-- 添加 source_file_name 列（如果不存在）
+ALTER TABLE chapters
+ADD COLUMN IF NOT EXISTS source_file_name TEXT;
 ```
 
 ## 4. 配置环境变量

@@ -19,6 +19,7 @@ export async function getChapters(userId: string): Promise<Chapter[]> {
     title: chapter.title,
     content: chapter.content,
     originalTranscript: chapter.original_transcript,
+    sourceFileName: chapter.source_file_name || chapter.title,
     createdAt: new Date(chapter.created_at).getTime(),
     selected: chapter.selected || false
   })) || [];
@@ -33,6 +34,7 @@ export async function saveChapter(userId: string, chapter: Chapter): Promise<Cha
       title: chapter.title,
       content: chapter.content,
       original_transcript: chapter.originalTranscript,
+      source_file_name: chapter.sourceFileName,
       created_at: new Date(chapter.createdAt).toISOString(),
       selected: chapter.selected || false
     }, {
@@ -51,6 +53,7 @@ export async function saveChapter(userId: string, chapter: Chapter): Promise<Cha
     title: data.title,
     content: data.content,
     originalTranscript: data.original_transcript,
+    sourceFileName: data.source_file_name || data.title,
     createdAt: new Date(data.created_at).getTime(),
     selected: data.selected || false
   };

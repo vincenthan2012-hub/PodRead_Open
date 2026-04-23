@@ -252,7 +252,7 @@ const App: React.FC = () => {
         const newChapter: Chapter = {
           id: crypto.randomUUID(),
           title: extractedTitle,
-          sourceFileName: extractedTitle, // Use title as fallback if no file
+          sourceFileName: "Pasted Transcript", // Default for manual input
           content: transformedText,
           originalTranscript: transcriptInput,
           createdAt: Date.now(),
