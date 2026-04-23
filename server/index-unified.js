@@ -87,9 +87,13 @@ app.post('/api/send-email', async (req, res) => {
       });
     }
 
-    // Convert content to HTML (preserve line breaks and support markdown)
+    // Convert content to HTML (preserve line breaks, support markdown, and skip separators)
     const htmlContent = content
       .split('\n')
+      .filter(line => {
+        const trimmed = line.trim();
+        return trimmed !== '---' && !/^[-*_]{3,}$/.test(trimmed);
+      })
       .map(line => line.trim() ? `<p>${formatMarkdownToHtml(line)}</p>` : '<br>')
       .join('');
 
@@ -119,7 +123,7 @@ app.post('/api/send-email', async (req, res) => {
               padding: 2em;
             }
             h1 {
-              font-size: 2em;
+              font-size: 1.4em;
               font-weight: bold;
               color: #000;
               margin-top: 1.5em;
@@ -128,14 +132,14 @@ app.post('/api/send-email', async (req, res) => {
               padding-bottom: 0.3em;
             }
             h2 {
-              font-size: 1.5em;
+              font-size: 1.2em;
               font-weight: 600;
               color: #000;
               margin-top: 1.2em;
               margin-bottom: 0.4em;
             }
             h3 {
-              font-size: 1.2em;
+              font-size: 1.05em;
               font-weight: 500;
               color: #000;
               margin-top: 1em;
@@ -171,9 +175,18 @@ app.post('/api/send-email', async (req, res) => {
                 content = '<p>No content available.</p>';
               }
               
+              let chapterHtml = formatChapterForEpub(content);
+              
+              // 添加 Podcast Source 信息
+              if (chapter.sourceFileName) {
+                chapterHtml += `<div style="margin-top: 3em; padding-top: 1em; border-top: 1px solid #eee; font-style: italic; color: #666; font-size: 0.9em;">
+                  Podcast Source / Episode: ${escapeHtml(chapter.sourceFileName)}
+                </div>`;
+              }
+              
               return {
                 title: chapter.title.trim(),
-                data: formatChapterForEpub(content),
+                data: chapterHtml,
                 excludeFromToc: false // 确保章节显示在目录中
               };
             })
@@ -331,12 +344,14 @@ function formatChapterForEpub(content) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    if (line === '') {
-      if (inParagraph) {
-        html += '</p>\n';
-        inParagraph = false;
+    if (line === '' || line === '---' || /^[-*_]{3,}$/.test(line)) {
+      if (line === '') {
+        if (inParagraph) {
+          html += '</p>\n';
+          inParagraph = false;
+        }
+        html += '<br/>\n';
       }
-      html += '<br/>\n';
       continue;
     }
     
@@ -416,7 +431,7 @@ app.post('/api/download-epub', async (req, res) => {
           padding: 2em;
         }
         h1 {
-          font-size: 2em;
+          font-size: 1.4em;
           font-weight: bold;
           color: #000;
           margin-top: 1.5em;
@@ -425,14 +440,14 @@ app.post('/api/download-epub', async (req, res) => {
           padding-bottom: 0.3em;
         }
         h2 {
-          font-size: 1.5em;
+          font-size: 1.2em;
           font-weight: 600;
           color: #000;
           margin-top: 1.2em;
           margin-bottom: 0.4em;
         }
         h3 {
-          font-size: 1.2em;
+          font-size: 1.05em;
           font-weight: 500;
           color: #000;
           margin-top: 1em;
@@ -468,9 +483,18 @@ app.post('/api/download-epub', async (req, res) => {
             content = '<p>No content available.</p>';
           }
           
+          let chapterHtml = formatChapterForEpub(content);
+          
+          // 添加 Podcast Source 信息
+          if (chapter.sourceFileName) {
+            chapterHtml += `<div style="margin-top: 3em; padding-top: 1em; border-top: 1px solid #eee; font-style: italic; color: #666; font-size: 0.9em;">
+              Podcast Source / Episode: ${escapeHtml(chapter.sourceFileName)}
+            </div>`;
+          }
+          
           return {
             title: chapter.title.trim(),
-            data: formatChapterForEpub(content),
+            data: chapterHtml,
             excludeFromToc: false // 确保章节显示在目录中
           };
         })

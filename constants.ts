@@ -19,6 +19,7 @@ Guidelines:
 * Aim for a chapter length of 2000 words
 * Maintain the intellectual rigor while making complex ideas accessible
 * Include smooth openings that hook readers and satisfying conclusions that tie ideas together
+* Do NOT use horizontal rules, lines, or separators (like "---") between sections or chapters; use subheadings (##) instead.
 
 Format the output as:
 # [Chapter Title]

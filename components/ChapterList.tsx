@@ -6,8 +6,10 @@ interface ChapterListProps {
   chapters: Chapter[];
   onSelect: (id: string) => void;
   onToggleSelection: (id: string) => void;
+  onToggleAllSelection: (selected: boolean) => void;
   selectedId: string | null;
   onDelete: (id: string) => void;
+  onBatchDelete: () => void;
   onUpdateTitle: (id: string, newTitle: string) => void;
 }
 
@@ -15,13 +17,18 @@ const ChapterList: React.FC<ChapterListProps> = ({
   chapters, 
   onSelect, 
   onToggleSelection, 
+  onToggleAllSelection,
   selectedId,
   onDelete,
+  onBatchDelete,
   onUpdateTitle
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedCount = chapters.filter(c => c.selected).length;
+  const isAllSelected = chapters.length > 0 && selectedCount === chapters.length;
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -33,7 +40,7 @@ const ChapterList: React.FC<ChapterListProps> = ({
   const handleTitleClick = (e: React.MouseEvent, chapter: Chapter) => {
     e.stopPropagation();
     setEditingId(chapter.id);
-    setEditingTitle(chapter.title);
+    setEditingTitle(chapter.sourceFileName || chapter.title);
   };
 
   const handleTitleBlur = (id: string) => {
@@ -61,8 +68,47 @@ const ChapterList: React.FC<ChapterListProps> = ({
   if (chapters.length === 0) return null;
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-stone-400 uppercase tracking-widest px-2">Library</h3>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between px-2 py-1 bg-stone-50/50 rounded-xl border border-stone-100">
+        <div className="flex items-center gap-3">
+          <div 
+            className="checkbox-container flex items-center justify-center p-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleAllSelection(!isAllSelected);
+            }}
+          >
+            <input 
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggleAllSelection(e.target.checked);
+              }}
+              className="w-4 h-4 rounded border-stone-300 text-stone-800 focus:ring-stone-500 cursor-pointer"
+            />
+          </div>
+          <span className="text-xs font-semibold text-stone-400 uppercase tracking-widest">
+            {selectedCount > 0 ? `${selectedCount} Selected` : 'Library'}
+          </span>
+        </div>
+        
+        {selectedCount > 0 && (
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onBatchDelete();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete Selected
+          </button>
+        )}
+      </div>
+
       <div className="space-y-1">
         {chapters.map((chapter) => (
           <div 
@@ -81,14 +127,7 @@ const ChapterList: React.FC<ChapterListProps> = ({
               if ((e.target as HTMLElement).closest('button[class*="opacity-0"]')) {
                 return;
               }
-              // 如果已经选中，再次点击则进入文章；如果未选中，则只选中
-              if (selectedId === chapter.id) {
-                // 已选中，再次点击进入文章
-                onSelect(chapter.id);
-              } else {
-                // 未选中，只选中不进入
-                onSelect(chapter.id);
-              }
+              onSelect(chapter.id);
             }}
           >
             <div 
@@ -130,7 +169,9 @@ const ChapterList: React.FC<ChapterListProps> = ({
                   }`}
                   onClick={(e) => handleTitleClick(e, chapter)}
                   title="点击编辑标题"
-                >{chapter.title}</h4>
+                >
+                  {chapter.sourceFileName || chapter.title}
+                </h4>
               )}
               <p className="text-xs text-stone-400 mt-0.5">
                 {new Date(chapter.createdAt).toLocaleDateString()}

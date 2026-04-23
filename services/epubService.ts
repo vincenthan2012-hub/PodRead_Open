@@ -7,9 +7,13 @@ import { Chapter, AppSettings } from "../types";
 function generateEpubContent(chapters: Chapter[]): string {
   const title = `PodRead Collection - ${new Date().toLocaleDateString()}`;
   const header = `# ${title}\n\nGenerated on ${new Date().toLocaleString()}\n\n---\n\n`;
-  const content = chapters.map((chapter, index) => 
-    `## Chapter ${index + 1}: ${chapter.title}\n\n${chapter.content}\n\n---\n\n`
-  ).join('');
+  const content = chapters.map((chapter, index) => {
+    let chapterContent = `## Chapter ${index + 1}: ${chapter.title}\n\n${chapter.content}`;
+    if (chapter.sourceFileName) {
+      chapterContent += `\n\n---\n*Podcast Source / Episode: ${chapter.sourceFileName}*\n`;
+    }
+    return chapterContent + `\n\n---\n\n`;
+  }).join('');
   return header + content;
 }
 

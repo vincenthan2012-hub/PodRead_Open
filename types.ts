@@ -2,6 +2,7 @@
 export interface Chapter {
   id: string;
   title: string;
+  sourceFileName?: string;
   content: string;
   originalTranscript: string;
   createdAt: number;

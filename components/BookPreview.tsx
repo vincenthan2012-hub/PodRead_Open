@@ -70,15 +70,17 @@ const BookPreview: React.FC<BookPreviewProps> = ({ chapter, onClose, onPrint }) 
             const trimmed = line.trim();
             
             if (trimmed.startsWith('# ')) {
-              return <h1 key={i} className="text-4xl font-bold display mb-12 text-black leading-tight">{formatText(trimmed.replace('# ', ''))}</h1>;
+              return <h1 key={i} className="text-3xl font-bold display mb-12 text-black leading-tight">{formatText(trimmed.replace('# ', ''))}</h1>;
             }
             if (trimmed.startsWith('## ')) {
-              return <h2 key={i} className="text-2xl font-semibold display mt-12 mb-6 text-black border-b border-stone-100 pb-2">{formatText(trimmed.replace('## ', ''))}</h2>;
+              return <h2 key={i} className="text-xl font-semibold display mt-12 mb-6 text-black border-b border-stone-100 pb-2">{formatText(trimmed.replace('## ', ''))}</h2>;
             }
             if (trimmed.startsWith('### ')) {
-              return <h3 key={i} className="text-xl font-medium serif italic mt-8 mb-4 text-black">{formatText(trimmed.replace('### ', ''))}</h3>;
+              return <h3 key={i} className="text-lg font-medium serif italic mt-8 mb-4 text-black">{formatText(trimmed.replace('### ', ''))}</h3>;
             }
-            if (trimmed === '') return <div key={i} className="h-4" />;
+            if (trimmed === '' || trimmed === '---' || /^[-*_]{3,}$/.test(trimmed)) {
+              return trimmed === '' ? <div key={i} className="h-4" /> : null;
+            }
 
             // Style for the first paragraph (Drop Cap)
             if (!hasRenderedFirstParagraph) {
@@ -93,6 +95,12 @@ const BookPreview: React.FC<BookPreviewProps> = ({ chapter, onClose, onPrint }) 
             // Standard paragraphs
             return <p key={i} className="mb-6 indent-0 leading-relaxed text-black">{formatText(trimmed)}</p>;
           })}
+          
+          {chapter.sourceFileName && (
+            <div className="mt-12 pt-6 border-t border-stone-100 text-stone-500 italic text-sm">
+              Podcast Source / Episode: {chapter.sourceFileName}
+            </div>
+          )}
         </article>
       </div>
     </div>

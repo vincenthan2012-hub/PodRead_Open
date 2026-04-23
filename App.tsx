@@ -95,16 +95,27 @@ const App: React.FC = () => {
       // Load chapters
       let userChapters = await getChapters(userId);
       
-      // 修复标题：如果标题是"Untitled Chapter"，尝试从content中重新提取
+      // 修复标题和 sourceFileName
       userChapters = await Promise.all(userChapters.map(async (chapter) => {
+        let needsUpdate = false;
+        let updatedChapter = { ...chapter };
+
         if (chapter.title === 'Untitled Chapter' && chapter.content) {
           const extractedTitle = extractTitleFromContent(chapter.content);
           if (extractedTitle !== 'Untitled Chapter') {
-            // 更新数据库中的标题
-            const updatedChapter = { ...chapter, title: extractedTitle };
-            await saveChapter(userId, updatedChapter);
-            return updatedChapter;
+            updatedChapter.title = extractedTitle;
+            needsUpdate = true;
           }
+        }
+
+        if (!chapter.sourceFileName) {
+          updatedChapter.sourceFileName = updatedChapter.title;
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          await saveChapter(userId, updatedChapter);
+          return updatedChapter;
         }
         return chapter;
       }));
@@ -200,7 +211,8 @@ const App: React.FC = () => {
           
           const newChapter: Chapter = {
             id: crypto.randomUUID(),
-            title: extractedTitle || file.name.replace(/\.[^/.]+$/, ""), // Use filename if title extraction fails
+            title: extractedTitle || file.name.replace(/\.[^/.]+$/, ""), // Used inside EPUB
+            sourceFileName: file.name.replace(/\.[^/.]+$/, ""), // Used for Library List
             content: transformedText,
             originalTranscript: file.content,
             createdAt: Date.now(),
@@ -240,6 +252,7 @@ const App: React.FC = () => {
         const newChapter: Chapter = {
           id: crypto.randomUUID(),
           title: extractedTitle,
+          sourceFileName: extractedTitle, // Use title as fallback if no file
           content: transformedText,
           originalTranscript: transcriptInput,
           createdAt: Date.now(),
@@ -383,6 +396,19 @@ const App: React.FC = () => {
     }
   };
 
+  const handleToggleAllSelection = async (selected: boolean) => {
+    setChapters(prev => prev.map(c => ({ ...c, selected })));
+    
+    if (user) {
+      try {
+        // 更新所有选中的章节
+        await Promise.all(chapters.map(c => updateChapterSelection(c.id, selected)));
+      } catch (error) {
+        console.error('Error updating all selections:', error);
+      }
+    }
+  };
+
   const handleDeleteChapter = async (id: string) => {
     if (!user) return;
     
@@ -396,14 +422,39 @@ const App: React.FC = () => {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (!user) return;
+    const selectedIds = chapters.filter(c => c.selected).map(c => c.id);
+    if (selectedIds.length === 0) return;
+
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} items?`)) return;
+
+    try {
+      await Promise.all(selectedIds.map(id => deleteChapter(id)));
+      setChapters(prev => prev.filter(c => !selectedIds.includes(c.id)));
+      if (activeChapterId && selectedIds.includes(activeChapterId)) setActiveChapterId(null);
+    } catch (error) {
+      console.error('Error batch deleting chapters:', error);
+      setStatus(prev => ({ ...prev, error: 'Failed to delete some chapters' }));
+    }
+  };
+
   const handleUpdateTitle = async (id: string, newTitle: string) => {
     if (!user) return;
     
     const chapter = chapters.find(c => c.id === id);
-    if (!chapter || chapter.title === newTitle) return;
+    if (!chapter) return;
+    
+    // 如果存在 sourceFileName，则更新它；否则更新 title
+    const updatedChapter = { 
+      ...chapter, 
+      sourceFileName: chapter.sourceFileName ? newTitle : chapter.sourceFileName,
+      title: !chapter.sourceFileName ? newTitle : chapter.title
+    };
+    
+    if (chapter.sourceFileName === newTitle || (!chapter.sourceFileName && chapter.title === newTitle)) return;
     
     try {
-      const updatedChapter = { ...chapter, title: newTitle };
       await saveChapterToDB(updatedChapter);
       setChapters(prev => prev.map(c => c.id === id ? updatedChapter : c));
     } catch (error) {
@@ -632,7 +683,9 @@ const App: React.FC = () => {
                   }
                 }}
                 onToggleSelection={handleToggleSelection}
+                onToggleAllSelection={handleToggleAllSelection}
                 onDelete={handleDeleteChapter}
+                onBatchDelete={handleBatchDelete}
                 onUpdateTitle={handleUpdateTitle}
               />
             )}
