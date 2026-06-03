@@ -1,173 +1,83 @@
-import { supabase } from '../lib/supabase';
-import { Chapter, AppSettings, AIProvider } from '../types';
+import { Chapter, AppSettings } from '../types';
 
-// Chapters table operations
-export async function getChapters(userId: string): Promise<Chapter[]> {
-  const { data, error } = await supabase
-    .from('chapters')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+const CHAPTERS_STORAGE_KEY = 'podread:chapters';
+const SETTINGS_STORAGE_KEY = 'podread:settings';
 
-  if (error) {
-    console.error('Error fetching chapters:', error);
-    throw error;
+const isBrowser = () => typeof window !== 'undefined' && !!window.localStorage;
+
+const readJson = <T,>(key: string, fallback: T): T => {
+  if (!isBrowser()) return fallback;
+
+  const rawValue = window.localStorage.getItem(key);
+  if (!rawValue) return fallback;
+
+  try {
+    return JSON.parse(rawValue) as T;
+  } catch (error) {
+    console.error(`Error parsing localStorage key "${key}":`, error);
+    return fallback;
   }
+};
 
-  return data?.map(chapter => ({
-    id: chapter.id,
-    title: chapter.title,
-    content: chapter.content,
-    originalTranscript: chapter.original_transcript,
-    sourceFileName: chapter.source_file_name || chapter.title,
-    createdAt: new Date(chapter.created_at).getTime(),
-    selected: chapter.selected || false
-  })) || [];
+const writeJson = <T,>(key: string, value: T): void => {
+  if (!isBrowser()) return;
+  window.localStorage.setItem(key, JSON.stringify(value));
+};
+
+const normalizeChapter = (chapter: Chapter): Chapter => ({
+  id: chapter.id,
+  title: chapter.title || 'Untitled Chapter',
+  content: chapter.content || '',
+  originalTranscript: chapter.originalTranscript || '',
+  sourceFileName: chapter.sourceFileName || chapter.title || 'Untitled Chapter',
+  createdAt: chapter.createdAt || Date.now(),
+  selected: chapter.selected || false
+});
+
+// The userId argument is kept for API compatibility with the previous remote storage service.
+export async function getChapters(_userId: string): Promise<Chapter[]> {
+  return readJson<Chapter[]>(CHAPTERS_STORAGE_KEY, [])
+    .map(normalizeChapter)
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
-export async function saveChapter(userId: string, chapter: Chapter): Promise<Chapter> {
-  const { data, error } = await supabase
-    .from('chapters')
-    .upsert({
-      id: chapter.id,
-      user_id: userId,
-      title: chapter.title,
-      content: chapter.content,
-      original_transcript: chapter.originalTranscript,
-      source_file_name: chapter.sourceFileName,
-      created_at: new Date(chapter.createdAt).toISOString(),
-      selected: chapter.selected || false
-    }, {
-      onConflict: 'id'
-    })
-    .select()
-    .single();
+export async function saveChapter(_userId: string, chapter: Chapter): Promise<Chapter> {
+  const normalizedChapter = normalizeChapter(chapter);
+  const chapters = readJson<Chapter[]>(CHAPTERS_STORAGE_KEY, []);
+  const existingIndex = chapters.findIndex(item => item.id === normalizedChapter.id);
 
-  if (error) {
-    console.error('Error saving chapter:', error);
-    throw error;
+  if (existingIndex >= 0) {
+    chapters[existingIndex] = normalizedChapter;
+  } else {
+    chapters.push(normalizedChapter);
   }
 
-  return {
-    id: data.id,
-    title: data.title,
-    content: data.content,
-    originalTranscript: data.original_transcript,
-    sourceFileName: data.source_file_name || data.title,
-    createdAt: new Date(data.created_at).getTime(),
-    selected: data.selected || false
-  };
+  writeJson(CHAPTERS_STORAGE_KEY, chapters);
+  return normalizedChapter;
 }
 
 export async function deleteChapter(chapterId: string): Promise<void> {
-  const { error } = await supabase
-    .from('chapters')
-    .delete()
-    .eq('id', chapterId);
-
-  if (error) {
-    console.error('Error deleting chapter:', error);
-    throw error;
-  }
+  const chapters = readJson<Chapter[]>(CHAPTERS_STORAGE_KEY, []);
+  writeJson(
+    CHAPTERS_STORAGE_KEY,
+    chapters.filter(chapter => chapter.id !== chapterId)
+  );
 }
 
 export async function updateChapterSelection(chapterId: string, selected: boolean): Promise<void> {
-  const { error } = await supabase
-    .from('chapters')
-    .update({ selected })
-    .eq('id', chapterId);
-
-  if (error) {
-    console.error('Error updating chapter selection:', error);
-    throw error;
-  }
+  const chapters = readJson<Chapter[]>(CHAPTERS_STORAGE_KEY, []);
+  writeJson(
+    CHAPTERS_STORAGE_KEY,
+    chapters.map(chapter => (
+      chapter.id === chapterId ? normalizeChapter({ ...chapter, selected }) : chapter
+    ))
+  );
 }
 
-// Settings table operations
-export async function getSettings(userId: string): Promise<AppSettings | null> {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      // No settings found, return null
-      return null;
-    }
-    console.error('Error fetching settings:', error);
-    throw error;
-  }
-
-  if (!data) return null;
-
-  const aiProvider = (data.ai_provider || 'gemini') as AIProvider;
-  let providerConfigs = data.provider_configs || {};
-
-  // Migrate legacy data: if providerConfigs is empty or doesn't have current provider, initialize from legacy fields
-  if (!providerConfigs || Object.keys(providerConfigs).length === 0 || !providerConfigs[aiProvider]) {
-    providerConfigs = {
-      ...providerConfigs,
-      [aiProvider]: {
-        apiKey: data.api_key || '',
-        apiUrl: data.api_url || '',
-        modelName: data.model_name || ''
-      }
-    };
-  }
-
-  // Get current provider's config
-  const currentProviderConfig = providerConfigs[aiProvider];
-  const apiKey = currentProviderConfig?.apiKey || '';
-  const apiUrl = currentProviderConfig?.apiUrl || '';
-  const modelName = currentProviderConfig?.modelName || '';
-
-  return {
-    aiProvider,
-    apiKey,
-    modelName,
-    apiUrl,
-    providerConfigs,
-    savedModels: data.saved_models || [],
-    useCustomSmtp: data.use_custom_smtp || false,
-    smtpHost: data.smtp_host || '',
-    smtpPort: data.smtp_port || '465',
-    smtpUser: data.smtp_user || '',
-    smtpPass: data.smtp_pass || ''
-  };
+export async function getSettings(_userId: string): Promise<AppSettings | null> {
+  return readJson<AppSettings | null>(SETTINGS_STORAGE_KEY, null);
 }
 
-export async function saveSettings(userId: string, settings: AppSettings): Promise<void> {
-  const { error } = await supabase
-    .from('user_settings')
-    .upsert({
-      user_id: userId,
-      ai_provider: settings.aiProvider,
-      api_key: settings.apiKey, // Keep for backward compatibility
-      model_name: settings.modelName,
-      api_url: settings.apiUrl, // Keep for backward compatibility
-      provider_configs: settings.providerConfigs || {},
-      saved_models: settings.savedModels,
-      use_custom_smtp: settings.useCustomSmtp,
-      smtp_host: settings.smtpHost,
-      smtp_port: settings.smtpPort,
-      smtp_user: settings.smtpUser,
-      smtp_pass: settings.smtpPass
-    }, {
-      onConflict: 'user_id'
-    });
-
-  if (error) {
-    // 如果错误是因为 provider_configs 列不存在，提供更友好的错误信息
-    if (error.message?.includes('provider_configs') || error.code === 'PGRST204') {
-      const errorMsg = '数据库表缺少 provider_configs 列。请在 Supabase SQL Editor 中执行以下 SQL 语句：\n\nALTER TABLE user_settings ADD COLUMN IF NOT EXISTS provider_configs JSONB DEFAULT \'{}\'::jsonb;';
-      console.error('Error: provider_configs column does not exist in database.');
-      console.error('Migration SQL:', errorMsg);
-      throw new Error(errorMsg);
-    }
-    console.error('Error saving settings:', error);
-    throw error;
-  }
+export async function saveSettings(_userId: string, settings: AppSettings): Promise<void> {
+  writeJson(SETTINGS_STORAGE_KEY, settings);
 }
-

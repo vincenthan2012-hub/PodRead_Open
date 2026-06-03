@@ -3,15 +3,14 @@ import Header from './components/Header';
 import ChapterList from './components/ChapterList';
 import BookPreview from './components/BookPreview';
 import SettingsModal from './components/SettingsModal';
-import AuthModal from './components/AuthModal';
 import { transformTranscript } from './services/aiService';
 import { generateEpubAndEmail, downloadEpub } from './services/epubService';
 import { getChapters, saveChapter, deleteChapter, updateChapterSelection, getSettings, saveSettings } from './services/databaseService';
-import { supabase } from './lib/supabase';
 import { getDefaultSettings } from './lib/envConfig';
 import { Chapter, AppSettings, GenerationStatus, ViewMode, BatchFile } from './types';
 import { PROVIDER_DEFAULTS } from './constants';
-import type { User } from '@supabase/supabase-js';
+
+const LOCAL_USER_ID = 'podread-local-user';
 
 // 从content中提取标题的辅助函数
 const extractTitleFromContent = (content: string): string => {
@@ -35,10 +34,9 @@ const extractTitleFromContent = (content: string): string => {
 };
 
 const App: React.FC = () => {
-  // Auth state
-  const [user, setUser] = useState<User | null>(null);
+  // Local storage is scoped to this browser/device.
+  const user = { id: LOCAL_USER_ID, email: 'Local storage' };
   const [loading, setLoading] = useState(true);
-  const [showAuth, setShowAuth] = useState(false);
 
   // App state
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -56,40 +54,12 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isInitialLoad = useRef(true);
 
-  // Initialize auth state
+  // Initialize local data
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (!session?.user) {
-        setShowAuth(true);
-      } else {
-        // 如果用户已登录，加载用户数据
-        loadUserData(session.user.id);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) {
-        setShowAuth(true);
-        setChapters([]);
-        setSettings(getDefaultSettings());
-        setIsSettingsLoaded(false);
-      } else {
-        setShowAuth(false);
-        setIsSettingsLoaded(false);
-        isInitialLoad.current = true; // 重置初始加载标志
-        loadUserData(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    loadUserData(LOCAL_USER_ID).finally(() => setLoading(false));
   }, []);
 
-  // Load user data from Supabase
+  // Load user data from localStorage
   const loadUserData = async (userId: string) => {
     try {
       // Load chapters
@@ -143,7 +113,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Save settings to Supabase
+  // Save settings to localStorage
   // 使用 ref 来跟踪是否是初始加载，避免在初始加载时保存
   useEffect(() => {
     // 如果是初始加载，跳过保存
@@ -155,17 +125,16 @@ const App: React.FC = () => {
     }
     
     // 只有在设置已加载且不是初始加载时才保存
-    if (user && settings && isSettingsLoaded) {
+    if (settings && isSettingsLoaded) {
       saveSettings(user.id, settings).catch(error => {
         console.error('Error saving settings:', error);
         setStatus(prev => ({ ...prev, error: 'Failed to save settings' }));
       });
     }
-  }, [settings, user, isSettingsLoaded]);
+  }, [settings, isSettingsLoaded]);
 
-  // Save chapter to Supabase when chapters change
+  // Save chapter to localStorage when chapters change
   const saveChapterToDB = async (chapter: Chapter) => {
-    if (!user) return;
     try {
       await saveChapter(user.id, chapter);
     } catch (error) {
@@ -174,24 +143,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAuthSuccess = () => {
-    setShowAuth(false);
-    if (user) {
-      loadUserData(user.id);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setShowAuth(true);
-  };
-
   const handleTransform = async () => {
-    if (!user) {
-      setShowAuth(true);
-      return;
-    }
-
     // Determine if we are doing batch or single transform
     const filesToProcess = batchFiles.filter(f => f.status === 'pending' || f.status === 'error');
     
@@ -386,32 +338,26 @@ const App: React.FC = () => {
     const newSelected = !chapter.selected;
     setChapters(prev => prev.map(c => c.id === id ? { ...c, selected: newSelected } : c));
     
-    // Update in Supabase
-    if (user) {
-      try {
-        await updateChapterSelection(id, newSelected);
-      } catch (error) {
-        console.error('Error updating selection:', error);
-      }
+    // Update in localStorage
+    try {
+      await updateChapterSelection(id, newSelected);
+    } catch (error) {
+      console.error('Error updating selection:', error);
     }
   };
 
   const handleToggleAllSelection = async (selected: boolean) => {
     setChapters(prev => prev.map(c => ({ ...c, selected })));
     
-    if (user) {
-      try {
-        // 更新所有选中的章节
-        await Promise.all(chapters.map(c => updateChapterSelection(c.id, selected)));
-      } catch (error) {
-        console.error('Error updating all selections:', error);
-      }
+    try {
+      // 更新所有选中的章节
+      await Promise.all(chapters.map(c => updateChapterSelection(c.id, selected)));
+    } catch (error) {
+      console.error('Error updating all selections:', error);
     }
   };
 
   const handleDeleteChapter = async (id: string) => {
-    if (!user) return;
-    
     try {
       await deleteChapter(id);
       setChapters(prev => prev.filter(c => c.id !== id));
@@ -423,7 +369,6 @@ const App: React.FC = () => {
   };
 
   const handleBatchDelete = async () => {
-    if (!user) return;
     const selectedIds = chapters.filter(c => c.selected).map(c => c.id);
     if (selectedIds.length === 0) return;
 
@@ -440,8 +385,6 @@ const App: React.FC = () => {
   };
 
   const handleUpdateTitle = async (id: string, newTitle: string) => {
-    if (!user) return;
-    
     const chapter = chapters.find(c => c.id === id);
     if (!chapter) return;
     
@@ -465,7 +408,7 @@ const App: React.FC = () => {
 
   const activeChapter = chapters.find(c => c.id === activeChapterId);
 
-  // Show loading or auth modal
+  // Show loading state while local data is read
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F9F7F2]">
@@ -474,17 +417,12 @@ const App: React.FC = () => {
     );
   }
 
-  if (showAuth || !user) {
-    return <AuthModal onAuthSuccess={handleAuthSuccess} />;
-  }
-
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F9F7F2]">
       <Header 
         currentView={currentView} 
         onViewChange={setCurrentView}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onLogout={handleLogout}
         userEmail={user.email}
       />
 
@@ -709,15 +647,13 @@ const App: React.FC = () => {
           settings={settings} 
           onSave={async (newSettings) => {
             setSettings(newSettings);
-            // 显式保存到数据库，确保保存成功
-            if (user) {
-              try {
-                await saveSettings(user.id, newSettings);
-                console.log('Settings saved successfully');
-              } catch (error) {
-                console.error('Error saving settings:', error);
-                setStatus(prev => ({ ...prev, error: 'Failed to save settings. Please try again.' }));
-              }
+            // 显式保存到 localStorage，确保保存成功
+            try {
+              await saveSettings(user.id, newSettings);
+              console.log('Settings saved successfully');
+            } catch (error) {
+              console.error('Error saving settings:', error);
+              setStatus(prev => ({ ...prev, error: 'Failed to save settings. Please try again.' }));
             }
           }} 
           onClose={() => setIsSettingsOpen(false)} 

@@ -57,7 +57,7 @@ if [ ! -f "$ENV_FILE" ]; then
         echo -e "${YELLOW}正在从 env.example 创建 .env 文件...${NC}"
         cp "$ENV_EXAMPLE" "$ENV_FILE"
         echo -e "${GREEN}✓ 已创建 .env 文件，请编辑配置后再运行${NC}"
-        echo -e "${YELLOW}提示: 至少需要配置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY${NC}"
+        echo -e "${YELLOW}提示: AI 和 SMTP 配置均可在应用设置中填写；.env 只用于提供默认值${NC}"
         echo ""
         read -p "是否现在编辑 .env 文件? (y/n) " -n 1 -r
         echo ""
@@ -70,14 +70,7 @@ if [ ! -f "$ENV_FILE" ]; then
     fi
 else
     echo -e "${GREEN}✓ 找到 .env 文件${NC}"
-    
-    # 检查必需的配置项
-    if ! grep -q "VITE_SUPABASE_URL=" "$ENV_FILE" || grep -q "VITE_SUPABASE_URL=your_supabase_project_url" "$ENV_FILE"; then
-        echo -e "${YELLOW}⚠️  警告: VITE_SUPABASE_URL 未配置或使用默认值${NC}"
-    fi
-    if ! grep -q "VITE_SUPABASE_ANON_KEY=" "$ENV_FILE" || grep -q "VITE_SUPABASE_ANON_KEY=your_supabase_anon_key" "$ENV_FILE"; then
-        echo -e "${YELLOW}⚠️  警告: VITE_SUPABASE_ANON_KEY 未配置或使用默认值${NC}"
-    fi
+    echo -e "${YELLOW}提示: 本项目使用浏览器 localStorage 保存章节和设置，无需数据库配置${NC}"
 fi
 echo ""
 
@@ -179,4 +172,3 @@ echo ""
 
 # 等待服务器运行
 wait $BACKEND_PID
-

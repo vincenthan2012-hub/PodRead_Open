@@ -10,15 +10,14 @@
 
 - 📝 **智能转换**: 使用 AI 将播客转录文本转换为结构化的书籍章节
 - 📚 **个人图书馆**: 保存和管理所有转换的章节
-- 🔐 **用户认证**: 基于 Supabase 的安全用户认证系统
-- ☁️ **云端存储**: 所有数据安全存储在 Supabase 数据库中
+- 💾 **本地存储**: 章节和设置保存在浏览器 localStorage 中，无需配置数据库
 - 📧 **邮件发送**: 将章节导出为 EPUB 并通过邮件发送
 - ⚙️ **灵活配置**: 支持多种 AI 提供商（Gemini, DeepSeek, OpenRouter 等）
 
 ## 技术栈
 
 - **前端**: React 19 + TypeScript + Vite
-- **认证和数据库**: Supabase
+- **数据存储**: 浏览器 localStorage
 - **AI 服务**: Google Gemini / 其他 OpenAI 兼容 API
 - **部署**: Render
 
@@ -37,10 +36,6 @@
    
    创建 `.env` 文件：
    ```env
-   # Supabase Configuration (必需)
-   VITE_SUPABASE_URL=your_supabase_project_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   
    # AI Provider Configuration (可选)
    VITE_AI_PROVIDER=gemini
    VITE_AI_API_URL=
@@ -55,16 +50,12 @@
    VITE_SMTP_PASS=your_app_password
    ```
 
-3. **设置 Supabase 数据库**:
-   
-   请参考 [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) 了解如何创建数据库表。
-
-4. **启动开发服务器**:
+3. **启动开发服务器**:
    ```bash
    npm run dev
    ```
 
-5. 访问 `http://localhost:3000`
+4. 访问 `http://localhost:3000`
 
 ### 部署到生产环境
 
@@ -74,7 +65,6 @@
 
 ```
 ├── components/          # React 组件
-│   ├── AuthModal.tsx   # 登录/注册界面
 │   ├── Header.tsx      # 顶部导航栏
 │   ├── ChapterList.tsx # 章节列表
 │   ├── BookPreview.tsx # 章节预览
@@ -82,22 +72,15 @@
 ├── services/           # 业务逻辑服务
 │   ├── aiService.ts    # AI 转换服务
 │   ├── epubService.ts  # EPUB 生成服务
-│   └── databaseService.ts # Supabase 数据库服务
+│   └── databaseService.ts # localStorage 本地存储服务
 ├── lib/                # 工具库
-│   └── supabase.ts     # Supabase 客户端配置
+│   └── envConfig.ts    # 环境变量默认配置
 ├── types.ts            # TypeScript 类型定义
 ├── constants.ts        # 常量配置
 └── App.tsx             # 主应用组件
 ```
 
 ## 环境变量说明
-
-### 必需的环境变量
-
-| 变量名 | 说明 |
-|--------|------|
-| `VITE_SUPABASE_URL` | Supabase 项目 URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase 匿名密钥 |
 
 ### 可选的环境变量（AI 配置）
 
@@ -120,14 +103,14 @@
 
 **注意**: 所有可选的环境变量都可以在应用内的设置面板中配置。环境变量主要用于设置默认值，方便团队统一配置。
 
-## 数据库结构
+## 数据存储
 
-应用使用两个主要数据表：
+应用不再依赖外部数据库。数据会保存在当前浏览器的 localStorage 中：
 
-1. **chapters**: 存储用户创建的章节
-2. **user_settings**: 存储用户的个人设置
+1. **podread:chapters**: 存储创建的章节、原始转录文本和选中状态
+2. **podread:settings**: 存储 AI 提供商、模型、API Key 和 SMTP 设置
 
-详细表结构请参考 [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)。
+这些数据仅在当前浏览器和设备上可用。清除浏览器站点数据、切换浏览器或更换设备后，需要重新配置设置并重新导入章节。
 
 ## 开发指南
 
@@ -153,4 +136,3 @@ MIT License
 
 如有问题，请查看：
 - [部署指南](./DEPLOYMENT.md)
-- [Supabase 设置指南](./SUPABASE_SETUP.md)
