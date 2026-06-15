@@ -21,41 +21,15 @@
 - **AI 服务**: Google Gemini / 其他 OpenAI 兼容 API
 - **部署**: Render
 
-## 快速开始
+## 本地快速运行
 
-### 本地开发
 
-**前置要求**: Node.js 18+
+1. 安装node.js (https://nodejs.org/en/download)
+2. Windows 直接运行 start-windows.bat；Mac 用终端运行start.sh。
+3. 在浏览器中访问http://localhost:3000。
+4. 在 Settings中配置大模型即可使用，推荐文案能力较好的模型比如Claude和GLM。
 
-1. **安装依赖**:
-   ```bash
-   npm install
-   ```
 
-2. **配置环境变量**:
-   
-   创建 `.env` 文件：
-   ```env
-   # AI Provider Configuration (可选)
-   VITE_AI_PROVIDER=gemini
-   VITE_AI_API_URL=
-   VITE_AI_MODEL_NAME=gemini-3-pro-preview
-   VITE_AI_API_KEY=
-   GEMINI_API_KEY=your_gemini_api_key
-   
-   # SMTP Email Configuration (可选)
-   VITE_SMTP_HOST=smtp.gmail.com
-   VITE_SMTP_PORT=465
-   VITE_SMTP_USER=your_email@gmail.com
-   VITE_SMTP_PASS=your_app_password
-   ```
-
-3. **启动开发服务器**:
-   ```bash
-   npm run dev
-   ```
-
-4. 访问 `http://localhost:3000`
 
 ### 部署到生产环境
 
