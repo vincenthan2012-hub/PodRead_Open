@@ -42,6 +42,9 @@ export interface AppSettings {
   smtpPort: string;
   smtpUser: string; // Used as both sender and primary recipient for simplicity
   smtpPass: string;
+  
+  // Display Preferences
+  literatureLanguage: 'auto' | 'English' | 'Chinese';
 }
 
 export interface GenerationStatus {

@@ -200,6 +200,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
             </div>
           </section>
 
+          {/* Preferences Section */}
+          <section className="space-y-4 pt-2">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1.5 h-6 bg-stone-600 rounded-full"></div>
+              <h3 className="text-sm font-bold text-stone-800 uppercase tracking-widest">Preferences</h3>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1.5 uppercase">Literature Language</label>
+              <div className="flex gap-2">
+                {[
+                  { value: 'auto', label: 'Same as Source' },
+                  { value: 'Chinese', label: 'Chinese' },
+                  { value: 'English', label: 'English' }
+                ].map((lang) => (
+                  <button
+                    key={lang.value}
+                    onClick={() => setLocalSettings({ ...localSettings, literatureLanguage: lang.value as any })}
+                    className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                      localSettings.literatureLanguage === lang.value
+                        ? 'bg-stone-800 text-white border-stone-800 shadow-sm'
+                        : 'bg-stone-50 text-stone-600 border-stone-200 hover:border-stone-400'
+                    }`}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-stone-400 mt-2">Target language for the generated book chapter.</p>
+            </div>
+          </section>
+
           {/* Delivery Section */}
           <section className="space-y-4 pt-2">
             <div className="flex items-center gap-2 mb-2">
