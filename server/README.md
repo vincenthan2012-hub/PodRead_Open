@@ -9,7 +9,6 @@
 - 自动生成 HTML 格式的邮件
 - 健康检查端点
 
-## 快速开始
 
 ### 1. 安装依赖
 
@@ -49,6 +48,14 @@ npm start
 ```
 
 服务器将在 `http://localhost:3000` 启动。
+
+
+## 快速开始
+
+1. 安装node.js (https://nodejs.org/en/download)
+2. Windows 直接运行 start-windows.bat；Mac 用终端运行start.sh。
+3. 在浏览器中访问http://localhost:3000。
+4. 在 Settings中配置大模型即可使用，推荐文案能力较好的模型比如Claude和GLM。
 
 ## API 端点
 
